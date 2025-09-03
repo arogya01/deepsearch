@@ -1,17 +1,21 @@
+"use client";
 import { useChat } from "@ai-sdk/react";
 import { useState } from "react";
 
 export const ChatWindow = () => {
     const [input, setInput] = useState("");
     
-    const { messages, sendMessage, status, error } = useChat({
+    const { messages, sendMessage, status, ...rest } = useChat({
         initialMessages: [
             {
                 role: "user",
                 content: "Hello, world!",
             },
+            
         ],
     });
+
+    console.log('rest', {rest, messages, status});
 
     const isLoading = status === "loading";
 
@@ -23,7 +27,7 @@ export const ChatWindow = () => {
             </div>
 
             {/* Messages Container */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 text-black">
                 {messages.map((message) => (
                     <div
                         key={message.id}
@@ -70,7 +74,7 @@ export const ChatWindow = () => {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Type your message..."
-                        className="flex-1 p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 p-2 border text-black border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         disabled={isLoading}
                     />
                     <button
