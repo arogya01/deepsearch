@@ -7,32 +7,31 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export const ChatWindow = () => {
   const [input, setInput] = useState("");
 
-  // useChat streams updates into `messages` as parts arrive
   const {
     messages,
     sendMessage,
-    status,       // 'ready' | 'submitted' | 'streaming' | ...
-    stop,         // cancel current stream
-    error,        // optional error from last attempt
+    status,        // 'submitted' | 'streaming' | 'ready' | 'error'
+    stop,          // cancel current stream
+    regenerate,    // retry last failed turn
+    error,         // error object from last attempt
   } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-    }),
-    // Optional: handle transient data parts if you stream them from the server
-    // onData: (dataPart) => { /* show toasts/progress bars for transient updates */ },
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    // onError: (e) => console.error(e),
+    // onFinish: ({ message, isAbort, isError }) => {},
+    // onData: (part) => {}, // for transient parts if server emits them
   });
 
+  const isSubmitted = status === "submitted";
   const isStreaming = status === "streaming";
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const isReady = status === "ready";
+  const isErrored = status === "error";
 
-  // Auto-scroll on new content
+  const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, isStreaming]);
+  }, [messages, isStreaming, isSubmitted]);
 
-  // Compose assistant text for display (supports both parts-based and legacy content)
   const renderMessageContent = (m: any) => {
-    // AI SDK v5: message.parts is an array of typed parts; stream updates mutate parts incrementally
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       return (
         <div className="whitespace-pre-wrap break-words">
@@ -44,14 +43,12 @@ export const ChatWindow = () => {
         </div>
       );
     }
-    // Fallback for legacy content shape
     return <div className="whitespace-pre-wrap break-words">{m.content}</div>;
   };
 
   const handleSubmit = async () => {
     const trimmed = input.trim();
-    if (!trimmed || isStreaming) return;
-    // sendMessage in AI SDK v5 accepts `{ text }` to append a user message and start streaming
+    if (!trimmed || !isReady) return;
     await sendMessage({ text: trimmed });
     setInput("");
   };
@@ -64,19 +61,32 @@ export const ChatWindow = () => {
   };
 
   const lastAssistantStreaming = useMemo(() => {
-    // If the last message is assistant and we're streaming, we can show a subtle typing indicator
     const last = messages[messages.length - 1];
-    return isStreaming && last?.role === "assistant";
-  }, [messages, isStreaming]);
+    return (isSubmitted || isStreaming) && last?.role === "assistant";
+  }, [messages, isSubmitted, isStreaming]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto h-[640px] flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white">
+    <div className="w-full max-w-2xl mx-auto h-[680px] flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white">
       {/* Header */}
       <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
         <h2 className="text-base font-semibold text-gray-900">Deep Search a topic</h2>
-        {status !== "ready" && (
-          <span className="text-xs text-gray-500">Status: {status}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {isSubmitted && (
+            <span className="inline-flex items-center rounded-md bg-amber-100 text-amber-800 px-2 py-1 text-xs">
+              Waiting for response…
+            </span>
+          )}
+          {isStreaming && (
+            <span className="inline-flex items-center rounded-md bg-blue-100 text-blue-700 px-2 py-1 text-xs">
+              Streaming…
+            </span>
+          )}
+          {isErrored && (
+            <span className="inline-flex items-center rounded-md bg-red-100 text-red-700 px-2 py-1 text-xs">
+              Error
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
@@ -111,10 +121,10 @@ export const ChatWindow = () => {
           </div>
         )}
 
-        {error && (
+        {isErrored && (
           <div className="flex justify-center">
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-md">
-              {String(error)}
+            <div className="w-full max-w-md text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-md">
+              Something went wrong. Please try again.
             </div>
           </div>
         )}
@@ -129,18 +139,33 @@ export const ChatWindow = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Ask anything…"
-            className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder={
+              isSubmitted || isStreaming
+                ? "Receiving response…"
+                : isErrored
+                ? "Fix or retry…"
+                : "Ask anything…"
+            }
+            className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
             rows={2}
-            disabled={isStreaming}
+            disabled={!isReady}
           />
-          {isStreaming ? (
+
+          {(isSubmitted || isStreaming) ? (
             <button
               type="button"
               onClick={() => stop()}
-              className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-gray-700 hover:bg-gray-50"
             >
               Stop
+            </button>
+          ) : isErrored ? (
+            <button
+              type="button"
+              onClick={() => regenerate()}
+              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            >
+              Retry
             </button>
           ) : (
             <button
@@ -153,6 +178,7 @@ export const ChatWindow = () => {
             </button>
           )}
         </div>
+
         <div className="mt-1 text-[11px] text-gray-500">
           Enter to send • Shift+Enter for newline
         </div>
