@@ -5,6 +5,10 @@
       "args": [
         "-y",
         "@upstash/context7-mcp"
+      ],
+      "alwaysAllow": [
+        "resolve-library-id",
+        "get-library-docs"
       ]
     },
     "playwright": {
@@ -22,5 +26,4 @@
       ]
     }
   }
-}}
 }

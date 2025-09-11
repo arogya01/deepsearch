@@ -40,6 +40,7 @@ makeRequest();
     if (!apiKey) {
         return Response.json({ error: 'SERPER_API_KEY not configured' }, { status: 500 });
     }
+    console.log('calling search-web tool')
 
     const data = JSON.stringify({
         "q": query
