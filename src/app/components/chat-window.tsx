@@ -3,6 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Streamdown } from "streamdown";
 
 export const ChatWindow = () => {
   const [input, setInput] = useState("");
@@ -38,7 +39,7 @@ export const ChatWindow = () => {
           {m.parts
             .filter((p: any) => p?.type === "text")
             .map((p: any, idx: number) => (
-              <span key={idx}>{p.text}</span>
+              <Streamdown key={idx}>{p.text}</Streamdown>
             ))}
         </div>
       );
