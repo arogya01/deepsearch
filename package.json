@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:debug": "NODE_OPTIONS='--inspect' next dev",
+    "dev:debug-brk": "NODE_OPTIONS='--inspect-brk' next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
