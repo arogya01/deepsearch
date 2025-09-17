@@ -22,13 +22,15 @@ export async function POST(req: Request) {
       ].join('\n'),
       tools: {
         searchWeb: tool({
-          description: 'Search the web for a given query',
+          description: 'Search the web for a given query',           
           inputSchema: z.object({
             query: z.string()
           }), 
           execute: async ({ query }) => {
             console.log('calling the tool')
-            const response = await fetch('/api/search-web', { method: 'POST', body: JSON.stringify({ query }) });
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+            const response = await fetch(`${baseUrl}/api/search-web`, { method: 'POST', body: JSON.stringify({ query }) });
+            console.log('response',response);
             return response.json();
           }
         })
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
       }
 
       if(toolResult.toolName === 'searchWeb'){
-        console.log(toolResult);
+        console.log('toolResult',toolResult);
       }
     }
 
