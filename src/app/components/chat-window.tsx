@@ -5,9 +5,14 @@ import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
 
+import type { UIMessage } from "ai";
+
+export type MessagePart = NonNullable<
+  Message["parts"]
+>[number];
+
 export const ChatWindow = () => {
   const [input, setInput] = useState("");
-
   const {
     messages,
     sendMessage,
