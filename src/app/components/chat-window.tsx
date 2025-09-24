@@ -4,27 +4,22 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
-
 import type { UIMessage } from "ai";
 
-export type MessagePart = NonNullable<
-  Message["parts"]
->[number];
+export type MessagePart = NonNullable<UIMessage["parts"]>[number];
 
 export const ChatWindow = () => {
   const [input, setInput] = useState("");
   const {
     messages,
     sendMessage,
-    status,        // 'submitted' | 'streaming' | 'ready' | 'error'
-    stop,          // cancel current stream
-    regenerate,    // retry last failed turn
-    error,         // error object from last attempt
+    status,
+    stop,
+    regenerate,
+    error,
   } = useChat({
+    // The data stream protocol is used by default with DefaultChatTransport
     transport: new DefaultChatTransport({ api: "/api/chat" }),
-    // onError: (e) => console.error(e),
-    // onFinish: ({ message, isAbort, isError }) => {},
-    // onData: (part) => {}, // for transient parts if server emits them
   });
 
   const isSubmitted = status === "submitted";
@@ -38,18 +33,60 @@ export const ChatWindow = () => {
   }, [messages, isStreaming, isSubmitted]);
 
   const renderMessageContent = (m: any) => {
-    if (Array.isArray(m.parts) && m.parts.length > 0) {
-      return (
-        <div className="whitespace-pre-wrap break-words">
-          {m.parts
-            .filter((p: any) => p?.type === "text")
-            .map((p: any, idx: number) => (
-              <Streamdown key={idx}>{p.text}</Streamdown>
-            ))}
-        </div>
-      );
-    }
-    return <div className="whitespace-pre-wrap break-words">{m.content}</div>;
+    const parts: MessagePart[] = Array.isArray(m.parts) ? m.parts : [];
+    const textParts = parts.filter((p: any) => p?.type === "text");
+    const sourceUrlParts = parts.filter(
+      (p: any) => p?.type === "source-url" || p?.type === "source"
+    ) as any[];
+
+    // Optional: queries from grounding metadata (added by server messageMetadata)
+    const webSearchQueries: string[] | undefined =
+      m?.metadata?.groundingMetadata?.webSearchQueries ?? undefined;
+
+    return (
+      <div className="whitespace-pre-wrap break-words">
+        {textParts.map((p: any, idx: number) => (
+          <Streamdown key={`text-${idx}`}>{p.text}</Streamdown>
+        ))}
+
+        {webSearchQueries && webSearchQueries.length > 0 && (
+          <div className="mt-3 text-xs text-gray-600">
+            <div className="font-medium">Queries used</div>
+            <ul className="list-disc ml-4">
+              {webSearchQueries.map((q, i) => (
+                <li key={`q-${i}`}>{q}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {sourceUrlParts.length > 0 && (
+          <div className="mt-3 text-xs text-gray-600">
+            <div className="font-medium">Sources</div>
+            <ul className="list-disc ml-4">
+              {sourceUrlParts.map((s, i) => {
+                // source-url part: { type: 'source-url', url, sourceId? }
+                // source part: { type: 'source', url, title? } when mapped from stream
+                const url = s.url ?? s.source?.url ?? "";
+                const title = s.title ?? s.source?.title ?? url;
+                return (
+                  <li key={`src-${i}`}>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-all"
+                    >
+                      {title}
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const handleSubmit = async () => {

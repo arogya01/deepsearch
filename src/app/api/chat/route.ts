@@ -1,57 +1,38 @@
 // app/api/chat/route.ts
-import { streamText, convertToModelMessages, type UIMessage, tool } from 'ai';
+import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { google } from '@ai-sdk/google';
-import { z } from 'zod';
 
-export const maxDuration = 30; // optional for long streams
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
-    const result = streamText({
-      model: google('gemini-2.5-flash'),
-      messages: convertToModelMessages(messages),
-      abortSignal: req.signal,
-      system: [
-        'You are a helpful assistant that can search the web for information.', 
-        'use the searchWeb tool to search the web for information.', 
-        'do not fabricate information, take help of external tools to get the information.',
-        'do not hallucinate information, if you are not sure about the information, say you do not know.',
-        'do not make up information, if you are not sure about the information, say you do not know.',        
-      ].join('\n'),
-      tools: {
-        searchWeb: tool({
-          description: 'Search the web for a given query',           
-          inputSchema: z.object({
-            query: z.string()
-          }), 
-          execute: async ({ query }) => {
-            console.log('calling the tool')
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-            const response = await fetch(`${baseUrl}/api/search-web`, { method: 'POST', body: JSON.stringify({ query }) });
-            console.log('response',response);
-            return response.json();
-          }
-        })
+  const result = streamText({
+    model: google('gemini-2.5-flash'),
+    messages: convertToModelMessages(messages),
+    system: [
+      'You are a helpful assistant.',
+      'When current information is needed, use Google Search grounding and include citations.',
+      'If unsure, say you do not know.',
+    ].join('\n'),
+    tools: {
+      // Native Google Search grounding (no execute handler; runs provider-side)
+      google_search: google.tools.googleSearch({}),
+    },
+  });
+
+  // Send text and source parts to the UI; attach grounding metadata via message metadata
+  return result.toUIMessageStreamResponse({
+    sendSources: true, // streams source parts (e.g., source-url) to the client
+    messageMetadata: ({ part }) => {
+      // Forward provider grounding metadata from the step where it becomes available
+      if (part.type === 'finish-step' && (part as any).providerMetadata?.google) {
+        const gm = (part as any).providerMetadata.google.groundingMetadata ?? null;
+        return { provider: 'google', groundingMetadata: gm };
       }
-    });
-
-    for(const toolResult of await result.toolCalls){
-      if(toolResult.dynamic){
-        continue;
+      if (part.type === 'finish') {
+        return { provider: 'google' };
       }
-
-      if(toolResult.toolName === 'searchWeb'){
-        console.log('toolResult',toolResult);
-      }
-    }
-
-    return result.toUIMessageStreamResponse();
-  } catch (err) {
-    return new Response(JSON.stringify({ error: 'Something went wrong.' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+    },
+  });
 }
