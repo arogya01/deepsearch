@@ -1,6 +1,21 @@
-import { clerkMiddleware } from '@clerk/nextjs/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
-export default clerkMiddleware();
+const isProtectedRoute = createRouteMatcher(['/chat(.*)']);
+
+export default clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
+  
+  // Protect the chat route
+  if (isProtectedRoute(req)) {
+    await auth.protect();
+  }
+
+  // Auto-redirect signed-in users from homepage to chat
+  if (req.nextUrl.pathname === '/' && userId) {
+    return NextResponse.redirect(new URL('/chat', req.url));
+  }
+});
 
 export const config = {
   matcher: [

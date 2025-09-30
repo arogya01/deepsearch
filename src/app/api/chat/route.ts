@@ -1,13 +1,31 @@
 // app/api/chat/route.ts
 import { streamText, convertToModelMessages, type UIMessage, tool } from 'ai';
 import { google } from '@ai-sdk/google';
-import { z } from 'zod';
+import { currentUser } from '@clerk/nextjs/server';
+import { ensureUserExists } from '@/server/auth/user-sync';
+import { userCache } from '@/server/redis';
 
 export const maxDuration = 30; // optional for long streams
 
 export async function POST(req: Request) {
-  try {
-    const { messages }: { messages: UIMessage[] } = await req.json();
+  // Authenticate user with Clerk
+  const clerkUser = await currentUser();
+  
+  if (!clerkUser) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Sync user data and update last active
+  const user = await ensureUserExists(clerkUser);
+  await userCache.updateLastActive(user.clerkId);
+
+  // Check rate limiting
+  const isLimited = await userCache.isRateLimited(user.clerkId, 'chat', 20, 3600); // 20 requests per hour
+  if (isLimited) {
+    return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
+  }
+
+  const { messages }: { messages: UIMessage[] } = await req.json();
 
     const result = streamText({
       model: google('gemini-2.5-flash'),

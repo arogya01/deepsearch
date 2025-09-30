@@ -1,9 +1,32 @@
 
 
+import { currentUser } from '@clerk/nextjs/server';
+import { ensureUserExists } from '@/server/auth/user-sync';
+import { userCache } from '@/server/redis';
+import { db } from '@/server/db';
+import { searchQueries } from '@/server/db/schema';
+
 //create a POST route to search the web for a given query using SERPER API 
 
 export async function POST(req: Request){
     try {
+        // Authenticate user with Clerk
+        const clerkUser = await currentUser();
+        
+        if (!clerkUser) {
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Sync user data and update last active
+        const user = await ensureUserExists(clerkUser);
+        await userCache.updateLastActive(user.clerkId);
+
+        // Check rate limiting
+        const isLimited = await userCache.isRateLimited(user.clerkId, 'search', 50, 3600); // 50 searches per hour
+        if (isLimited) {
+            return Response.json({ error: 'Search rate limit exceeded' }, { status: 429 });
+        }
+
         // Parse request body with error handling
         let query: string;
         try {
@@ -61,6 +84,19 @@ export async function POST(req: Request){
             const responseText = await response.text();
             result = JSON.parse(responseText);
             console.log('Search results received successfully',responseText);
+            
+            // Log search query for analytics
+            const resultCount = (result as any)?.organic?.length || 0;
+            await db.insert(searchQueries).values({
+                userId: user.id,
+                query,
+                source: 'web',
+                resultCount,
+            }).catch(error => {
+                console.error('Failed to log search query:', error);
+                // Don't fail the request if logging fails
+            });
+            
             return Response.json(result);
         } catch (error) {
             console.error('Error parsing SERPER API response:', error);
