@@ -11,7 +11,13 @@
     "lint": "eslint",
     "drizzle:generate": "drizzle-kit generate",
     "drizzle:push": "drizzle-kit push",
-    "drizzle:studio": "drizzle-kit studio"
+    "drizzle:studio": "drizzle-kit studio",
+    "redis:start": "./start-redis.sh",
+    "redis:check": "./check-redis.sh",
+    "redis:stop": "docker stop deepsearch-redis",
+    "redis:logs": "docker logs -f deepsearch-redis",
+    "redis:cli": "docker exec -it deepsearch-redis redis-cli -a arogya30",
+    "redis:insight": "open -a RedisInsight"
   },
   "dependencies": {
     "@ai-sdk/google": "2.0.11",

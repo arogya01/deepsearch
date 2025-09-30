@@ -1,6 +1,7 @@
 // app/api/chat/route.ts
 import { streamText, convertToModelMessages, type UIMessage, tool } from 'ai';
 import { google } from '@ai-sdk/google';
+import { z } from 'zod';
 import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
@@ -8,13 +9,17 @@ import { userCache } from '@/server/redis';
 export const maxDuration = 30; // optional for long streams
 
 export async function POST(req: Request) {
+
+  try{
   // Authenticate user with Clerk
   const clerkUser = await currentUser();
+  console.log('clerkUser',JSON.stringify(clerkUser,null,2));
   
   if (!clerkUser) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  console.log('entering ensureUserExists');
   // Sync user data and update last active
   const user = await ensureUserExists(clerkUser);
   await userCache.updateLastActive(user.clerkId);
@@ -66,10 +71,12 @@ export async function POST(req: Request) {
     }
 
     return result.toUIMessageStreamResponse();
-  } catch (err) {
+  }catch (err) {
+    console.error('Error in chat route:', err);
     return new Response(JSON.stringify({ error: 'Something went wrong.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-}
+  }
+
