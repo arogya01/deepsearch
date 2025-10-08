@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
+import { performWebSearch } from '@/server/search/web-search';
 
 export const maxDuration = 30; // optional for long streams
 
@@ -50,11 +51,16 @@ export async function POST(req: Request) {
             query: z.string()
           }), 
           execute: async ({ query }) => {
-            console.log('calling the tool')
-            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-            const response = await fetch(`${baseUrl}/api/search-web`, { method: 'POST', body: JSON.stringify({ query }) });
-            console.log('response',response);
-            return response.json();
+            console.log('Executing searchWeb tool for query:', query);
+            try {
+              // Call the shared search function directly with user.id
+              const result = await performWebSearch(query, user.id);
+              console.log('Search completed successfully');
+              return result;
+            } catch (error) {
+              console.error('Error in searchWeb tool:', error);
+              throw error;
+            }
           }
         })
       }

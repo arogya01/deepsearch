@@ -1,10 +1,8 @@
 
-
 import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
-import { db } from '@/server/db';
-import { searchQueries } from '@/server/db/schema';
+import { performWebSearch } from '@/server/search/web-search';
 
 //create a POST route to search the web for a given query using SERPER API 
 
@@ -41,71 +39,30 @@ export async function POST(req: Request){
             return Response.json({ error: 'Invalid JSON in request body' }, { status: 400 });
         }
 
-        // Check API key configuration
-        const apiKey = process.env.SERPER_API_KEY;
-        if (!apiKey) {
-            return Response.json({ error: 'SERPER_API_KEY not configured' }, { status: 500 });
-        }
-        
-        console.log('calling search-web tool for query:', query);
-
-        const data = JSON.stringify({
-            "q": query
-        });
-
-        // Make API request with error handling
-        let response: Response;
-        try {
-            response = await fetch('https://google.serper.dev/search', {
-                method: 'POST',
-                headers: { 
-                    'X-API-KEY': apiKey,
-                    'Content-Type': 'application/json'
-                },
-                body: data, 
-                redirect: "follow"
-            });
-        } catch (error) {
-            console.error('Error making request to SERPER API:', error);
-            return Response.json({ error: 'Failed to connect to search service' }, { status: 503 });
-        }
-
-        // Check if the API response was successful
-        if (!response.ok) {
-            console.error('SERPER API returned error:', response.status, response.statusText);
-            return Response.json({ 
-                error: `Search service returned error: ${response.status} ${response.statusText}` 
-            }, { status: response.status === 429 ? 429 : 503 });
-        }
-        
-        // Parse response with error handling
-        let result: unknown;
-        try {
-            const responseText = await response.text();
-            result = JSON.parse(responseText);
-            console.log('Search results received successfully',responseText);
-            
-            // Log search query for analytics
-            const resultCount = (result as any)?.organic?.length || 0;
-            await db.insert(searchQueries).values({
-                userId: user.id,
-                query,
-                source: 'web',
-                resultCount,
-            }).catch(error => {
-                console.error('Failed to log search query:', error);
-                // Don't fail the request if logging fails
-            });
-            
-            return Response.json(result);
-        } catch (error) {
-            console.error('Error parsing SERPER API response:', error);
-            return Response.json({ error: 'Invalid response from search service' }, { status: 502 });
-        }
+        // Perform the web search using shared logic
+        const result = await performWebSearch(query, user.id);
+        return Response.json(result);
 
     } catch (error) {
         // Catch any unexpected errors
         console.error('Unexpected error in search-web route:', error);
+        
+        // Handle specific error types
+        if (error instanceof Error) {
+            if (error.message.includes('SERPER_API_KEY')) {
+                return Response.json({ error: error.message }, { status: 500 });
+            }
+            if (error.message.includes('Failed to connect')) {
+                return Response.json({ error: error.message }, { status: 503 });
+            }
+            if (error.message.includes('Search service returned error')) {
+                return Response.json({ error: error.message }, { status: 503 });
+            }
+            if (error.message.includes('Invalid response')) {
+                return Response.json({ error: error.message }, { status: 502 });
+            }
+        }
+        
         return Response.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
