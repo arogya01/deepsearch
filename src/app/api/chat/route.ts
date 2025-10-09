@@ -14,7 +14,6 @@ export async function POST(req: Request) {
   try{
   // Authenticate user with Clerk
   const clerkUser = await currentUser();
-  console.log('clerkUser',JSON.stringify(clerkUser,null,2));
   
   if (!clerkUser) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
             try {
               // Call the shared search function directly with user.id
               const result = await performWebSearch(query, user.id);
-              console.log('Search completed successfully');
+              console.log('Search completed successfully',result);
               return result;
             } catch (error) {
               console.error('Error in searchWeb tool:', error);
