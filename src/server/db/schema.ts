@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, jsonb, boolean, integer } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -26,7 +26,13 @@ export const chatSessions = pgTable('chat_sessions', {
     role: 'user' | 'assistant';
     content: string;
     timestamp: string;
+    metaData?:{
+      toolCalls: any[]; // any[] because toolCalls can be of any type
+      searchResults: any[];
+    }
   }>>().default([]),
+  isActive: boolean('is_active').default(true),
+  messageCount: integer('message_count').default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
