@@ -2,7 +2,7 @@ import { pgTable, serial, text, timestamp, jsonb, boolean, integer } from 'drizz
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  clerkId: text('clerk_id').notNull().unique(), // linking to clerk user
+  clerkId: text('clerk_id').notNull().unique(), // linking to clerk user, 
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   profileImageUrl: text('profile_image_url'),
@@ -20,7 +20,7 @@ export const users = pgTable('users', {
 // Chat/Search history table for user sessions
 export const chatSessions = pgTable('chat_sessions', {
   id: serial('id').primaryKey(),
-  userId: serial('user_id').references(() => users.id).notNull(),
+  userId: integer('user_id').references(() => users.id).notNull(),
   title: text('title'),
   messages: jsonb('messages').$type<Array<{
     role: 'user' | 'assistant';
@@ -40,9 +40,9 @@ export const chatSessions = pgTable('chat_sessions', {
 // Search queries for analytics
 export const searchQueries = pgTable('search_queries', {
   id: serial('id').primaryKey(),
-  userId: serial('user_id').references(() => users.id),
+  userId: integer('user_id').references(() => users.id),
   query: text('query').notNull(),
   source: text('source').default('web'), // 'web', 'chat', etc.
-  resultCount: serial('result_count'),
+  resultCount: integer('result_count'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
