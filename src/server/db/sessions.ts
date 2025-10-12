@@ -1,7 +1,12 @@
-import {db} from "./index"; 
-import {chatSessions} from "./schema";
-import {eq, desc, and} from "drizzle-orm"; 
+/**
+ * Legacy file - Most session operations have been moved to chat-persistence.ts
+ * This file is kept for backward compatibility and may contain utility functions
+ */
 
-export type ChatMessage = {
-    role: "user" | "assis"
-}
+// Re-export common session operations from chat-persistence
+export {
+  createOrGetSession,
+  updateSessionMetadata,
+  getUserSessions,
+  getSessionWithMessages,
+} from './chat-persistence';
