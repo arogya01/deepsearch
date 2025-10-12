@@ -116,7 +116,6 @@ export const resumableStreams = pgTable('resumable_streams', {
   ),
 }));
 
-// Search queries for analytics
 export const searchQueries = pgTable('search_queries', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id),

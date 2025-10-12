@@ -1,11 +1,19 @@
 // app/api/chat/route.ts
-import { streamText, convertToModelMessages, type UIMessage, tool } from 'ai';
+import { streamText, convertToModelMessages, type UIMessage, tool, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
 import { performWebSearch } from '@/server/search/web-search';
+import {
+  createOrGetSession,
+  saveMessages,
+  updateSessionMetadata,
+  generateSessionTitle,
+  extractFirstUserMessage,
+  getSessionWithMessages,
+} from '@/server/db/chat-persistence';
 
 export const maxDuration = 30; // optional for long streams
 
@@ -30,11 +38,24 @@ export async function POST(req: Request) {
     return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
   }
 
-  const { messages }: { messages: UIMessage[] } = await req.json();
+  const { messages, id }: { messages: UIMessage[]; id?: string } = await req.json();
+
+  // Create or get existing chat session
+  const { sessionId, isNew } = await createOrGetSession(user.id, id);
+  console.log(`Chat session: ${sessionId} (${isNew ? 'new' : 'existing'})`);
+
+  // Load existing messages if this is a continuing conversation
+  let allMessages = messages;
+  if (!isNew && messages.length === 0) {
+    const sessionData = await getSessionWithMessages(sessionId);
+    if (sessionData) {
+      allMessages = sessionData.messages;
+    }
+  }
 
     const result = streamText({
       model: google('gemini-2.5-flash'),
-      messages: convertToModelMessages(messages),
+      messages: convertToModelMessages(allMessages),
       abortSignal: req.signal,
       system: [
         'You are a helpful assistant that can search the web for information.', 
@@ -65,17 +86,61 @@ export async function POST(req: Request) {
       }
     });
 
-    for(const toolResult of await result.toolCalls){
-      if(toolResult.dynamic){
-        continue;
-      }
+    // Create stream with custom data part for session ID
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        // Send session info as custom data part (transient, won't be in message history)
+        writer.write({
+          type: 'data-session',
+          id: 'session-info',
+          data: { 
+            sessionId: sessionId,
+            isNew: isNew,
+          },
+          transient: true,
+        });
 
-      if(toolResult.toolName === 'searchWeb'){
-        console.log('toolResult',toolResult);
-      }
-    }
+        // Merge the AI response stream
+        writer.merge(result.toUIMessageStream());
+      },
+    });
 
-    return result.toUIMessageStreamResponse();
+    // Handle persistence in the background after stream completes
+    result.text.then(async (text) => {
+      try {
+        console.log('Stream finished, saving to database...');
+        
+        // Reconstruct messages with the completed response
+        const response = await result.response;
+        const assistantMessage: UIMessage = {
+          id: response.id,
+          role: 'assistant',
+          parts: [{ type: 'text', text }],
+        };
+        
+        const finishedMessages = [...allMessages, assistantMessage];
+        await saveMessages(sessionId, finishedMessages);
+
+        if (isNew) {
+          const firstUserText = extractFirstUserMessage(finishedMessages);
+          if (firstUserText) {
+            const title = generateSessionTitle(firstUserText);
+            await updateSessionMetadata(sessionId, { title });
+          }
+        }
+
+        await updateSessionMetadata(sessionId, {
+          messageCount: finishedMessages.length,
+          lastMessageAt: new Date(),
+        });
+
+        console.log(`Saved ${finishedMessages.length} messages to session ${sessionId}`);
+      } catch (error) {
+        console.error('Error saving messages to database:', error);
+      }
+    });
+
+    return createUIMessageStreamResponse({ stream });
   }catch (err) {
     console.error('Error in chat route:', err);
     return new Response(JSON.stringify({ error: 'Something went wrong.' }), {

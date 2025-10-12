@@ -3,16 +3,20 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Streamdown } from "streamdown";
 
 import type { UIMessage } from "ai";
 
 export type MessagePart = NonNullable<
-  Message["parts"]
+  UIMessage["parts"]
 >[number];
 
-export const ChatWindow = () => {
+export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
   const [input, setInput] = useState("");
+  const router = useRouter();
+  const [sessionId, setSessionId] = useState<string | undefined>(chatId);
+  const [hasRedirected, setHasRedirected] = useState(false);
   const {
     messages,
     sendMessage,
@@ -21,10 +25,25 @@ export const ChatWindow = () => {
     regenerate,    // retry last failed turn
     error,         // error object from last attempt
   } = useChat({
+    id: sessionId,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
-    // onError: (e) => console.error(e),
-    // onFinish: ({ message, isAbort, isError }) => {},
-    // onData: (part) => {}, // for transient parts if server emits them
+    onData: ({ data, type }) => {
+      // Handle custom data-session part from backend
+      if (type === 'data-session') {
+        const newSessionId = (data as { sessionId: string; isNew: boolean }).sessionId;
+        
+        // Only redirect if we don't have a chatId in URL and haven't redirected yet
+        if (!chatId && !hasRedirected && newSessionId) {
+          setHasRedirected(true);
+          router.push(`/chat/${newSessionId}`);
+        }
+        
+        // Update session state
+        if (newSessionId && newSessionId !== sessionId) {
+          setSessionId(newSessionId);
+        }
+      }
+    },
   });
 
   const isSubmitted = status === "submitted";
@@ -32,24 +51,31 @@ export const ChatWindow = () => {
   const isReady = status === "ready";
   const isErrored = status === "error";
 
+  // Sync chatId from URL params with state
+  useEffect(() => {
+    if (chatId && chatId !== sessionId) {
+      setSessionId(chatId);
+    }
+  }, [chatId, sessionId]);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, isStreaming, isSubmitted]);
 
-  const renderMessageContent = (m: any) => {
+  const renderMessageContent = (m: UIMessage) => {
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       return (
         <div className="whitespace-pre-wrap break-words">
           {m.parts
-            .filter((p: any) => p?.type === "text")
-            .map((p: any, idx: number) => (
-              <Streamdown key={idx}>{p.text}</Streamdown>
+            .filter((p) => p?.type === "text")
+            .map((p, idx: number) => (
+              <Streamdown key={idx}>{'text' in p ? p.text : ''}</Streamdown>
             ))}
         </div>
       );
     }
-    return <div className="whitespace-pre-wrap break-words">{m.content}</div>;
+    return <div className="whitespace-pre-wrap break-words"></div>;
   };
 
   const handleSubmit = async () => {
