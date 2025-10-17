@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@source "../src/app/**/*.{js,ts,jsx,tsx,md,mdx}";
+@source "../src/components/**/*.{js,ts,jsx,tsx,md,mdx}";
+@source "../src/lib/**/*.{js,ts,jsx,tsx,md,mdx}";
+@source "../src/server/**/*.{js,ts,jsx,tsx,md,mdx}";
+@source "../src/hooks/**/*.{js,ts,jsx,tsx,md,mdx}";
 @source "../node_modules/streamdown/dist/index.js";
 
 @theme inline {
