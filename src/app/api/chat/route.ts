@@ -6,6 +6,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
 import { performWebSearch } from '@/server/search/web-search';
+import { revalidatePath } from 'next/cache';
 import {
   createOrGetSession,
   saveMessages,
@@ -133,6 +134,9 @@ export async function POST(req: Request) {
           messageCount: finishedMessages.length,
           lastMessageAt: new Date(),
         });
+
+        revalidatePath('/chat');
+        revalidatePath(`/chat/${sessionId}`);
 
         console.log(`Saved ${finishedMessages.length} messages to session ${sessionId}`);
       } catch (error) {
