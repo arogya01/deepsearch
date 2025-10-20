@@ -2,7 +2,8 @@
 
 import { currentUser } from "@clerk/nextjs/server";
 import { ensureUserExists } from "@/server/auth/user-sync";
-import { getUserSessions } from "@/server/db/chat-persistence";
+import { getSessionWithMessages, getUserSessions } from "@/server/db/chat-persistence";
+import { UIMessage } from "ai";
 
 export async function fetchSidebarSessions(
   limit = 20
@@ -25,3 +26,12 @@ export async function fetchSidebarSessions(
   return getUserSessions(user.id, limit);
 }
 
+
+export async function fetchChatMessages(sessionId: string): Promise<UIMessage[]>{
+  const session = await getSessionWithMessages(sessionId);
+  console.log({ session });
+  if (!session) {
+    return [];
+  }
+  return session.messages;
+}

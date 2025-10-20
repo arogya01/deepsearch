@@ -8,11 +8,15 @@ import { Streamdown } from "streamdown";
 
 import type { UIMessage } from "ai";
 
-export type MessagePart = NonNullable<
-  UIMessage["parts"]
->[number];
+export type MessagePart = NonNullable<UIMessage["parts"]>[number];
 
-export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
+export const ChatWindow = ({
+  chatId,
+  initialMessages,
+}: {
+  chatId?: string;
+  initialMessages?: UIMessage[];
+}) => {
   const [input, setInput] = useState("");
   const router = useRouter();
   const [sessionId, setSessionId] = useState<string | undefined>(chatId);
@@ -20,24 +24,26 @@ export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
   const {
     messages,
     sendMessage,
-    status,        // 'submitted' | 'streaming' | 'ready' | 'error'
-    stop,          // cancel current stream
-    regenerate,    // retry last failed turn
-    error,         // error object from last attempt
+    status, // 'submitted' | 'streaming' | 'ready' | 'error'
+    stop, // cancel current stream
+    regenerate, // retry last failed turn
+    error, // error object from last attempt
   } = useChat({
     id: sessionId,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    messages: initialMessages,
     onData: ({ data, type }) => {
       // Handle custom data-session part from backend
-      if (type === 'data-session') {
-        const newSessionId = (data as { sessionId: string; isNew: boolean }).sessionId;
-        
+      if (type === "data-session") {
+        const newSessionId = (data as { sessionId: string; isNew: boolean })
+          .sessionId;
+
         // Only redirect if we don't have a chatId in URL and haven't redirected yet
         if (!chatId && !hasRedirected && newSessionId) {
           setHasRedirected(true);
           router.push(`/chat/${newSessionId}`);
         }
-        
+
         // Update session state
         if (newSessionId && newSessionId !== sessionId) {
           setSessionId(newSessionId);
@@ -70,7 +76,7 @@ export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
           {m.parts
             .filter((p) => p?.type === "text")
             .map((p, idx: number) => (
-              <Streamdown key={idx}>{'text' in p ? p.text : ''}</Streamdown>
+              <Streamdown key={idx}>{"text" in p ? p.text : ""}</Streamdown>
             ))}
         </div>
       );
@@ -98,10 +104,12 @@ export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
   }, [messages, isSubmitted, isStreaming]);
 
   return (
-    <div className="w-full max-w-2xl mx-auto h-[680px] flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white">
+    <div className="w-full flex flex-col">
       {/* Header */}
       <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900">Deep Search a topic</h2>
+        <h2 className="text-base font-semibold text-gray-900">
+          Deep Search a topic
+        </h2>
         <div className="flex items-center gap-2">
           {isSubmitted && (
             <span className="inline-flex items-center rounded-md bg-amber-100 text-amber-800 px-2 py-1 text-xs">
@@ -126,11 +134,16 @@ export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
         {messages.map((m) => {
           const isUser = m.role === "user";
           return (
-            <div key={m.id} className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+            <div
+              key={m.id}
+              className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+            >
               <div
                 className={[
                   "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
-                  isUser ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900",
+                  isUser
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-900",
                 ].join(" ")}
               >
                 {renderMessageContent(m)}
@@ -183,7 +196,7 @@ export const ChatWindow = ({ chatId }: { chatId?: string } = {}) => {
             disabled={!isReady}
           />
 
-          {(isSubmitted || isStreaming) ? (
+          {isSubmitted || isStreaming ? (
             <button
               type="button"
               onClick={() => stop()}
