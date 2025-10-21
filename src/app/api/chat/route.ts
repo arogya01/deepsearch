@@ -15,6 +15,15 @@ import {
   extractFirstUserMessage,
   getSessionWithMessages,
 } from '@/server/db/chat-persistence';
+import { after } from 'next/server';
+import {
+  observe,
+  updateActiveObservation,
+  updateActiveTrace,
+} from "@langfuse/tracing";
+import { trace } from "@opentelemetry/api";
+import { langfuseSpanProcessor } from "../../../instrumentation";
+
 
 export const maxDuration = 30; // optional for long streams
 
@@ -56,6 +65,12 @@ export async function POST(req: Request) {
 
     const result = streamText({
       model: google('gemini-2.5-flash'),
+      experimental_telemetry: {
+        isEnabled: true,
+        // metadata: { 
+        //   langfusePrompt: prompt.toJSON() // This links the Generation to your prompt in Langfuse
+        // },
+      },
       messages: convertToModelMessages(allMessages),
       abortSignal: req.signal,
       system: [
@@ -84,7 +99,30 @@ export async function POST(req: Request) {
             }
           }
         })
-      }
+      }, 
+      onFinish: async (result) => {
+        updateActiveObservation({
+          output: result.content,
+        });
+        updateActiveTrace({
+          output: result.content,
+        });
+   
+        // End span manually after stream has finished
+        trace.getActiveSpan().end();
+      },
+      onError: async (error) => {
+        updateActiveObservation({
+          output: error,
+          level: "ERROR"
+        });
+        updateActiveTrace({
+          output: error,
+        });
+   
+        // End span manually after stream has finished
+        trace.getActiveSpan()?.end();
+      },
     });
 
     // Create stream with custom data part for session ID
@@ -143,6 +181,8 @@ export async function POST(req: Request) {
         console.error('Error saving messages to database:', error);
       }
     });
+
+    after(async () => await langfuseSpanProcessor.forceFlush());
 
     return createUIMessageStreamResponse({ stream });
   }catch (err) {
