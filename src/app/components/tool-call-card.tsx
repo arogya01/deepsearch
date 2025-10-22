@@ -10,15 +10,32 @@ interface ToolCallPart {
   toolName: string;
   args?: unknown;
   result?: unknown;
-  state?: "call" | "result" | "partial-call";
-  [key: string]: unknown; // Allow other properties from AI SDK
+  input?: unknown;
+  output?: unknown;
+  state?: string;
 }
+
+const toDisplayValue = (value: unknown) => {
+  if (value === undefined) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (error) {
+    console.warn("Failed to stringify tool call value", error);
+    return String(value);
+  }
+};
 
 export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Determine the state based on whether we have a result
-  const hasResult = part.result !== undefined;
+  const hasResult = part.result !== undefined || part.output !== undefined;
   const isPartialCall = part.state === "partial-call";
 
   const getStatusInfo = () => {
@@ -53,11 +70,35 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
 
   const status = getStatusInfo();
 
-  // Extract query from args
-  const query =
-    typeof part.args === "object" && part.args !== null && "query" in part.args
-      ? String((part.args as { query?: string }).query || "")
-      : "";
+  const getQueryValue = () => {
+    if (
+      typeof part.args === "object" &&
+      part.args !== null &&
+      "query" in part.args
+    ) {
+      return String((part.args as { query?: string }).query || "");
+    }
+
+    if (
+      typeof part.input === "object" &&
+      part.input !== null &&
+      "query" in part.input
+    ) {
+      return String((part.input as { query?: string }).query || "");
+    }
+
+    return "";
+  };
+
+  const query = getQueryValue();
+
+  const detailSections: Array<{
+    label: string;
+    value: unknown;
+  }> = [
+    { label: "Input", value: part.input ?? part.args },
+    { label: "Result", value: part.result ?? part.output },
+  ];
 
   return (
     <div
@@ -105,17 +146,24 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
         )}
       </div>
 
-      {/* Expanded Content - Only for successful results */}
       {isExpanded && hasResult && (
-        <div className="mt-3 border-t border-green-200 pt-3">
-          <div className="text-xs font-semibold text-gray-700 mb-2">
-            Results:
-          </div>
-          <pre className="text-xs bg-white rounded p-2 overflow-x-auto max-h-64 overflow-y-auto border border-green-100">
-            {typeof part.result === "string"
-              ? part.result
-              : JSON.stringify(part.result, null, 2)}
-          </pre>
+        <div className="mt-3 border-t border-green-200 pt-3 space-y-3">
+          {detailSections.map(({ label, value }) => {
+            if (value === undefined) {
+              return null;
+            }
+
+            return (
+              <div key={label}>
+                <div className="text-xs font-semibold text-gray-700 mb-2">
+                  {label}:
+                </div>
+                <pre className="text-xs bg-white rounded p-2 overflow-x-auto max-h-64 overflow-y-auto border border-green-100">
+                  {toDisplayValue(value)}
+                </pre>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

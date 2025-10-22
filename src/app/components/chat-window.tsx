@@ -13,6 +13,72 @@ import type { UIMessage } from "ai";
 
 export type MessagePart = NonNullable<UIMessage["parts"]>[number];
 
+const TOOL_MESSAGE_PREFIX = "tool-";
+
+type ToolMessagePart = MessagePart & {
+  type: string;
+  toolCallId?: string;
+  toolName?: string;
+  args?: unknown;
+  result?: unknown;
+  input?: unknown;
+  output?: unknown;
+  state?: string;
+};
+
+type NormalizedToolMessagePart = {
+  type: string;
+  toolCallId: string;
+  toolName: string;
+  args?: unknown;
+  result?: unknown;
+  input?: unknown;
+  output?: unknown;
+  state?: string;
+};
+
+const isToolMessagePart = (part: MessagePart): part is ToolMessagePart => {
+  if (!part || typeof part !== "object") {
+    return false;
+  }
+
+  if (!("type" in part) || typeof part.type !== "string") {
+    return false;
+  }
+
+  return part.type.startsWith(TOOL_MESSAGE_PREFIX);
+};
+
+const normalizeToolMessagePart = (
+  part: ToolMessagePart
+): NormalizedToolMessagePart => {
+  const type = typeof part.type === "string" ? part.type : "";
+  const fromType = type.startsWith(TOOL_MESSAGE_PREFIX)
+    ? type.slice(TOOL_MESSAGE_PREFIX.length)
+    : undefined;
+
+  const toolName =
+    typeof part.toolName === "string" && part.toolName.length > 0
+      ? part.toolName
+      : fromType || "tool";
+
+  const toolCallId =
+    typeof part.toolCallId === "string" && part.toolCallId.length > 0
+      ? part.toolCallId
+      : `tool_${generateNanoId(12)}`;
+
+  return {
+    type,
+    toolCallId,
+    toolName,
+    args: "args" in part ? part.args : undefined,
+    result: "result" in part ? part.result : undefined,
+    input: "input" in part ? part.input : undefined,
+    output: "output" in part ? part.output : undefined,
+    state: "state" in part ? part.state : undefined,
+  };
+};
+
 function generateNanoId(size: number = 21): string {
   const alphabet =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -87,6 +153,7 @@ export const ChatWindow = ({
   }, [chatId, hasRedirected, messages.length, sessionId, router]);
 
   const renderMessageContent = (m: UIMessage) => {
+    console.log({ m });
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       return (
         <div className="whitespace-pre-wrap break-words">
@@ -102,18 +169,9 @@ export const ChatWindow = ({
                 );
 
               default:
-                // Handle tool calls (type starts with "tool-")
-                if (part.type.startsWith("tool-")) {
-                  // Check if this is a searchWeb tool call
-                  if ("toolName" in part && part.toolName === "searchWeb") {
-                    // Cast to a compatible type for ToolCallCard
-                    const toolPart = part as unknown as {
-                      type: string;
-                      toolCallId: string;
-                      toolName: string;
-                      args?: unknown;
-                      result?: unknown;
-                    };
+                if (isToolMessagePart(part)) {
+                  const toolPart = normalizeToolMessagePart(part);
+                  if (toolPart.toolName === "searchWeb") {
                     return (
                       <ToolCallCard
                         key={toolPart.toolCallId || idx}
