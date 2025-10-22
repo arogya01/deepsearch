@@ -13,6 +13,18 @@ import type { UIMessage } from "ai";
 
 export type MessagePart = NonNullable<UIMessage["parts"]>[number];
 
+function generateNanoId(size: number = 21): string {
+  const alphabet =
+    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  let id = "";
+
+  for (let i = 0; i < size; i++) {
+    id += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+  }
+
+  return id;
+}
+
 export const ChatWindow = ({
   chatId,
   initialMessages,
@@ -22,7 +34,9 @@ export const ChatWindow = ({
 }) => {
   const [input, setInput] = useState("");
   const router = useRouter();
-  const [sessionId, setSessionId] = useState<string | undefined>(chatId);
+  const [sessionId, setSessionId] = useState<string | undefined>(
+    chatId || `chat_${generateNanoId()}`
+  );
   const [hasRedirected, setHasRedirected] = useState(false);
   const {
     messages,
@@ -35,20 +49,18 @@ export const ChatWindow = ({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
     messages: initialMessages,
     onData: ({ data, type }) => {
-      // Handle custom data-session part from backend
+      // Handle custom data-session part from backend (for validation/confirmation)
       if (type === "data-session") {
-        const newSessionId = (data as { sessionId: string; isNew: boolean })
+        // Backend confirms the session ID
+        // We already have the sessionId generated client-side, so this is mainly for validation
+        const backendSessionId = (data as { sessionId: string; isNew: boolean })
           .sessionId;
 
-        // Only redirect if we don't have a chatId in URL and haven't redirected yet
-        if (!chatId && !hasRedirected && newSessionId) {
-          setHasRedirected(true);
-          router.push(`/chat/${newSessionId}`);
-        }
-
-        // Update session state
-        if (newSessionId && newSessionId !== sessionId) {
-          setSessionId(newSessionId);
+        // Log if there's a mismatch (shouldn't happen in normal flow)
+        if (backendSessionId !== sessionId) {
+          console.warn(
+            `Session ID mismatch: client=${sessionId}, backend=${backendSessionId}`
+          );
         }
       }
     },
@@ -59,12 +71,20 @@ export const ChatWindow = ({
   const isReady = status === "ready";
   const isErrored = status === "error";
 
-  // Sync chatId from URL params with state
+  // Sync chatId from URL params with state, and redirect when starting new chat
   useEffect(() => {
     if (chatId && chatId !== sessionId) {
       setSessionId(chatId);
     }
   }, [chatId, sessionId]);
+
+  // Redirect to the chat URL when first message is sent on base /chat route
+  useEffect(() => {
+    if (!chatId && !hasRedirected && messages.length > 0 && sessionId) {
+      setHasRedirected(true);
+      router.push(`/chat/${sessionId}`);
+    }
+  }, [chatId, hasRedirected, messages.length, sessionId, router]);
 
   const renderMessageContent = (m: UIMessage) => {
     if (Array.isArray(m.parts) && m.parts.length > 0) {
@@ -81,12 +101,27 @@ export const ChatWindow = ({
                   </Streamdown>
                 );
 
-              case "tool-searchWeb":
-                return (
-                  <ToolCallCard key={part.toolCallId || idx} part={part} />
-                );
-
               default:
+                // Handle tool calls (type starts with "tool-")
+                if (part.type.startsWith("tool-")) {
+                  // Check if this is a searchWeb tool call
+                  if ("toolName" in part && part.toolName === "searchWeb") {
+                    // Cast to a compatible type for ToolCallCard
+                    const toolPart = part as unknown as {
+                      type: string;
+                      toolCallId: string;
+                      toolName: string;
+                      args?: unknown;
+                      result?: unknown;
+                    };
+                    return (
+                      <ToolCallCard
+                        key={toolPart.toolCallId || idx}
+                        part={toolPart}
+                      />
+                    );
+                  }
+                }
                 return null;
             }
           })}

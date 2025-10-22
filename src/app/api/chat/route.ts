@@ -1,5 +1,5 @@
 // app/api/chat/route.ts
-import { streamText, convertToModelMessages, type UIMessage, tool, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
+import { streamText, convertToModelMessages, type UIMessage, tool, stepCountIs } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { currentUser } from '@clerk/nextjs/server';
@@ -17,7 +17,6 @@ import {
 } from '@/server/db/chat-persistence';
 import { after } from 'next/server';
 import {
-  observe,
   updateActiveObservation,
   updateActiveTrace,
 } from "@langfuse/tracing";
@@ -75,23 +74,23 @@ export async function POST(req: Request) {
       abortSignal: req.signal,
       system: [
         'You are a helpful assistant that can search the web for information.', 
-        'use the searchWeb tool to search the web for information.', 
-        'do not fabricate information, take help of external tools to get the information.',
-        'do not hallucinate information, if you are not sure about the information, say you do not know.',
-        'do not make up information, if you are not sure about the information, say you do not know.',        
+        'Use the searchWeb tool to search the web for information when needed.',
+        'After getting search results, provide a comprehensive answer based on the information found.',
+        'Do not fabricate information - always use the search tool to get real data.',
+        'If you are not sure about something, say you do not know.',
       ].join('\n'),
       tools: {
         searchWeb: tool({
-          description: 'Search the web for a given query',           
+          description: 'Search the web for a given query. Use this to find current, factual information.',           
           inputSchema: z.object({
-            query: z.string()
+            query: z.string().describe('The search query to look up')
           }), 
           execute: async ({ query }) => {
             console.log('Executing searchWeb tool for query:', query);
             try {
               // Call the shared search function directly with user.id
               const result = await performWebSearch(query, user.id);
-              console.log('Search completed successfully',result);
+              console.log('Search completed successfully', result);
               return result;
             } catch (error) {
               console.error('Error in searchWeb tool:', error);
@@ -99,7 +98,21 @@ export async function POST(req: Request) {
             }
           }
         })
-      }, 
+      },
+      // CRITICAL: Enable multi-step tool calling so model can use tool results in its response
+      stopWhen: stepCountIs(5),
+      // Optional: Log each step for debugging
+      onStepFinish: async ({ toolResults, text }) => {
+        if (toolResults && toolResults.length > 0) {
+          console.log('Step finished with tool results:', toolResults.map(r => ({
+            toolName: r.toolName,
+            hasOutput: !!r.output
+          })));
+        }
+        if (text) {
+          console.log('Step finished with text length:', text.length);
+        }
+      },
       onFinish: async (result) => {
         updateActiveObservation({
           output: result.content,
@@ -109,7 +122,7 @@ export async function POST(req: Request) {
         });
    
         // End span manually after stream has finished
-        trace.getActiveSpan().end();
+        trace.getActiveSpan()?.end();
       },
       onError: async (error) => {
         updateActiveObservation({
@@ -125,36 +138,20 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create stream with custom data part for session ID
-    const stream = createUIMessageStream({
-      execute: async ({ writer }) => {
-        // Send session info as custom data part (transient, won't be in message history)
-        writer.write({
-          type: 'data-session',
-          id: 'session-info',
-          data: { 
-            sessionId: sessionId,
-            isNew: isNew,
-          },
-          transient: true,
-        });
-
-        // Merge the AI response stream
-        writer.merge(result.toUIMessageStream());
-      },
-    });
-
     // Handle persistence in the background after stream completes
-    result.text.then(async (text) => {
+    result.text.then(async (finalText) => {
       try {
         console.log('Stream finished, saving to database...');
         
-        // Reconstruct messages with the completed response
+        // Get the full response metadata
         const response = await result.response;
+        
+        // Convert response to UIMessage format for storage
+        // Use the final text from the stream
         const assistantMessage: UIMessage = {
           id: response.id,
           role: 'assistant',
-          parts: [{ type: 'text', text }],
+          parts: finalText ? [{ type: 'text', text: finalText }] : [],
         };
         
         const finishedMessages = [...allMessages, assistantMessage];
@@ -184,7 +181,9 @@ export async function POST(req: Request) {
 
     after(async () => await langfuseSpanProcessor.forceFlush());
 
-    return createUIMessageStreamResponse({ stream });
+    // Return the stream response
+    // Note: Session data is sent via the custom transport mechanism on the client
+    return result.toUIMessageStreamResponse();
   }catch (err) {
     console.error('Error in chat route:', err);
     return new Response(JSON.stringify({ error: 'Something went wrong.' }), {

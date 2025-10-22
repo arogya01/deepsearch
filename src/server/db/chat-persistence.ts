@@ -100,6 +100,7 @@ export function generateSessionTitle(firstMessage: string): string {
 
 /**
  * Saves an array of UIMessages to the database after stream completion
+ * Uses upsert to handle sequence conflicts gracefully
  */
 export async function saveMessages(
   sessionId: string,
@@ -108,22 +109,55 @@ export async function saveMessages(
   for (let i = 0; i < uiMessages.length; i++) {
     const message = uiMessages[i];
     
-    // Check if message already exists
-    const existingMessage = await db.query.messages.findFirst({
-      where: eq(messages.id, message.id),
-    });
-
-    if (existingMessage) {
-      // Update existing message
-      await updateMessage(message);
-    } else {
-      // Insert new message
-      await insertMessage(sessionId, message, i);
-    }
+    // Upsert message with sequence - handles conflicts automatically
+    await upsertMessage(sessionId, message, i);
 
     // Save message parts (text, tool calls, tool results)
     await saveMessageParts(message.id, message.parts);
   }
+}
+
+/**
+ * Upserts a message - inserts if new, updates if exists at the same position
+ * Handles sequence conflicts by overwriting the message at that position
+ */
+async function upsertMessage(
+  sessionId: string,
+  message: UIMessage,
+  sequence: number
+): Promise<void> {
+  const isCompleted = message.parts.some(part => 
+    'isFinal' in part && part.isFinal
+  );
+
+  const now = new Date();
+  const messageData: SaveMessageParams = {
+    id: message.id,
+    sessionId,
+    sequence,
+    role: message.role,
+    status: isCompleted ? 'completed' : 'streaming',
+    content: null, // We store content in message_parts
+    metadata: {},
+    startedAt: now,
+    completedAt: isCompleted ? now : undefined,
+  };
+
+  // Upsert: Insert or update on conflict with (sessionId, sequence)
+  await db.insert(messages)
+    .values(messageData)
+    .onConflictDoUpdate({
+      target: [messages.sessionId, messages.sequence],
+      set: {
+        id: messageData.id,
+        role: messageData.role,
+        status: messageData.status,
+        content: messageData.content,
+        metadata: messageData.metadata,
+        completedAt: messageData.completedAt,
+        updatedAt: now,
+      },
+    });
 }
 
 /**
