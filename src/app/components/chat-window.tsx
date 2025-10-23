@@ -8,6 +8,7 @@ import { Streamdown } from "streamdown";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { ToolCallCard } from "./tool-call-card";
+import { generateNanoId } from "@/app/utils/common";
 
 import type { UIMessage } from "ai";
 
@@ -46,16 +47,28 @@ const isToolMessagePart = (part: MessagePart): part is ToolMessagePart => {
     return false;
   }
 
-  return part.type.startsWith(TOOL_MESSAGE_PREFIX);
+  // Handle both streaming format (tool-${toolName}) and stored format (tool-call, tool-result)
+  return (
+    part.type.startsWith(TOOL_MESSAGE_PREFIX) ||
+    part.type === "tool-call" ||
+    part.type === "tool-result"
+  );
 };
 
 const normalizeToolMessagePart = (
   part: ToolMessagePart
 ): NormalizedToolMessagePart => {
   const type = typeof part.type === "string" ? part.type : "";
-  const fromType = type.startsWith(TOOL_MESSAGE_PREFIX)
-    ? type.slice(TOOL_MESSAGE_PREFIX.length)
-    : undefined;
+
+  // Extract tool name from different formats
+  let fromType: string | undefined;
+  if (type.startsWith(TOOL_MESSAGE_PREFIX)) {
+    // Streaming format: tool-${toolName}
+    fromType = type.slice(TOOL_MESSAGE_PREFIX.length);
+  } else if (type === "tool-call" || type === "tool-result") {
+    // Stored format: use toolName field directly
+    fromType = undefined;
+  }
 
   const toolName =
     typeof part.toolName === "string" && part.toolName.length > 0
@@ -79,23 +92,13 @@ const normalizeToolMessagePart = (
   };
 };
 
-function generateNanoId(size: number = 21): string {
-  const alphabet =
-    "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  let id = "";
-
-  for (let i = 0; i < size; i++) {
-    id += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
-  }
-
-  return id;
-}
-
 export const ChatWindow = ({
   chatId,
   initialMessages,
+  newChat,
 }: {
   chatId?: string;
+  newChat?: boolean;
   initialMessages?: UIMessage[];
 }) => {
   const [input, setInput] = useState("");
@@ -146,11 +149,11 @@ export const ChatWindow = ({
 
   // Redirect to the chat URL when first message is sent on base /chat route
   useEffect(() => {
-    if (!chatId && !hasRedirected && messages.length > 0 && sessionId) {
+    if (newChat && !hasRedirected && messages.length > 0 && sessionId) {
       setHasRedirected(true);
       router.push(`/chat/${sessionId}`);
     }
-  }, [chatId, hasRedirected, messages.length, sessionId, router]);
+  }, [newChat, hasRedirected, messages.length, sessionId, router]);
 
   const renderMessageContent = (m: UIMessage) => {
     console.log({ m });

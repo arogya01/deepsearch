@@ -140,19 +140,80 @@ export async function POST(req: Request) {
 
     // Handle persistence in the background after stream completes
     result.text.then(async (finalText) => {
+      const response = await result.response;
       try {
         console.log('Stream finished, saving to database...');
         
-        // Get the full response metadata
-        const response = await result.response;
+        // Extract tool calls and results from response.messages
+        // response.messages contains the full conversation including tool activity
+        // ModelMessage uses 'input' for tool calls and 'output' for tool results
+        const toolParts: Array<{
+          type: 'tool-call';
+          toolCallId: string;
+          toolName: string;
+          args: unknown;
+        } | {
+          type: 'tool-result';
+          toolCallId: string;
+          toolName: string;
+          result: unknown;
+        }> = [];
         
-        // Convert response to UIMessage format for storage
-        // Use the final text from the stream
+        if (response.messages) {
+          for (const message of response.messages) {
+            if (message.role === 'assistant' && 'content' in message) {
+              // Extract tool-call parts from assistant messages
+              const content = message.content;
+              if (Array.isArray(content)) {
+                for (const part of content) {
+                  if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-call') {
+                    // ModelMessage ToolCallPart has 'input' field
+                    toolParts.push({
+                      type: 'tool-call',
+                      toolCallId: part.toolCallId,
+                      toolName: part.toolName,
+                      args: part.input,
+                    });
+                  }
+                }
+              }
+            } else if (message.role === 'tool' && 'content' in message) {
+              // Extract tool-result parts from tool messages
+              const content = message.content;
+              if (Array.isArray(content)) {
+                for (const part of content) {
+                  if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-result') {
+                    // ModelMessage ToolResultPart has 'output' field
+                    toolParts.push({
+                      type: 'tool-result',
+                      toolCallId: part.toolCallId,
+                      toolName: part.toolName,
+                      result: part.output,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Build merged parts array: tool calls, tool results, then final text
+        // Note: We store tool parts in a simplified format for database persistence
+        // The UI will handle rendering these parts correctly
+        const mergedParts = [
+          ...toolParts,
+          ...(finalText ? [{ type: 'text' as const, text: finalText }] : []),
+        ];
+        
+        // Convert response to UIMessage format for storage with all parts
+        // Cast to UIMessage since our storage format is simpler than the streaming format
         const assistantMessage: UIMessage = {
           id: response.id,
           role: 'assistant',
-          parts: finalText ? [{ type: 'text', text: finalText }] : [],
+          parts: mergedParts as unknown as UIMessage['parts'],
         };
+        
+        console.log(`Assistant message has ${mergedParts.length} parts (${toolParts.length} tool parts, ${finalText ? 1 : 0} text part)`);
         
         const finishedMessages = [...allMessages, assistantMessage];
         await saveMessages(sessionId, finishedMessages);
