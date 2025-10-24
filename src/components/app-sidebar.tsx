@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import {
   Sidebar,
@@ -22,7 +23,19 @@ export async function AppSidebar() {
     <Sidebar collapsible="offcanvas">
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Deep Research</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/chat" className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  <span>New Chat</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Previous Chats</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {sessions.length === 0 ? (
