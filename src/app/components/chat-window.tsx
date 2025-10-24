@@ -103,10 +103,10 @@ export const ChatWindow = ({
 }) => {
   const [input, setInput] = useState("");
   const router = useRouter();
-  const [sessionId, setSessionId] = useState<string | undefined>(
-    chatId || `chat_${generateNanoId()}`
-  );
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const sessionId = useMemo(() => {
+    return chatId || `chat_${generateNanoId()}`;
+  }, [chatId]);
+  console.log({ sessionId });
   const {
     messages,
     sendMessage,
@@ -117,6 +117,11 @@ export const ChatWindow = ({
     id: sessionId,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
     messages: initialMessages,
+    onFinish: () => {
+      if (newChat) {
+        router.push(`/chat/${sessionId}`);
+      }
+    },
     onData: ({ data, type }) => {
       // Handle custom data-session part from backend (for validation/confirmation)
       if (type === "data-session") {
@@ -126,6 +131,7 @@ export const ChatWindow = ({
           .sessionId;
 
         // Log if there's a mismatch (shouldn't happen in normal flow)
+        console.log({ backendSessionId, sessionId });
         if (backendSessionId !== sessionId) {
           console.warn(
             `Session ID mismatch: client=${sessionId}, backend=${backendSessionId}`
@@ -139,21 +145,6 @@ export const ChatWindow = ({
   const isStreaming = status === "streaming";
   const isReady = status === "ready";
   const isErrored = status === "error";
-
-  // Sync chatId from URL params with state, and redirect when starting new chat
-  useEffect(() => {
-    if (chatId && chatId !== sessionId) {
-      setSessionId(chatId);
-    }
-  }, [chatId, sessionId]);
-
-  // Redirect to the chat URL when first message is sent on base /chat route
-  useEffect(() => {
-    if (newChat && !hasRedirected && messages.length > 0 && sessionId) {
-      setHasRedirected(true);
-      router.push(`/chat/${sessionId}`);
-    }
-  }, [newChat, hasRedirected, messages.length, sessionId, router]);
 
   const renderMessageContent = (m: UIMessage) => {
     console.log({ m });
@@ -175,12 +166,7 @@ export const ChatWindow = ({
                 if (isToolMessagePart(part)) {
                   const toolPart = normalizeToolMessagePart(part);
                   if (toolPart.toolName === "searchWeb") {
-                    return (
-                      <ToolCallCard
-                        key={toolPart.toolCallId || idx}
-                        part={toolPart}
-                      />
-                    );
+                    return <ToolCallCard key={idx} part={toolPart} />;
                   }
                 }
                 return null;

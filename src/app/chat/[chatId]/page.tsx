@@ -6,7 +6,15 @@ export default async function ChatPage({
 }: {
   params: { chatId: string };
 }) {
-  const messages = await fetchChatMessages(params.chatId);
+  const chatId = await params.chatId;
+  const messages = await fetchChatMessages(chatId);
 
-  return <ChatWindow chatId={params.chatId} initialMessages={messages} />;
+  return (
+    <ChatWindow
+      key={chatId}
+      chatId={chatId}
+      initialMessages={messages}
+      newChat={false}
+    />
+  );
 }
