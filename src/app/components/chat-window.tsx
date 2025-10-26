@@ -204,26 +204,26 @@ export const ChatWindow = ({
   return (
     <div className="w-full flex flex-col h-screen">
       {/* Header */}
-      <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
+      <div className="bg-gray-50 px-3 py-2 md:px-4 md:py-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
           <SidebarTrigger />
-          <h2 className="text-base font-semibold text-gray-900">
+          <h2 className="text-sm md:text-base font-semibold text-gray-900">
             Deep Search a topic
           </h2>
         </div>
         <div className="flex items-center gap-2">
           {isSubmitted && (
-            <span className="inline-flex items-center rounded-md bg-amber-100 text-amber-800 px-2 py-1 text-xs">
+            <span className="hidden sm:inline-flex items-center rounded-md bg-amber-100 text-amber-800 px-2 py-1 text-xs">
               Waiting for response…
             </span>
           )}
           {isStreaming && (
-            <span className="inline-flex items-center rounded-md bg-blue-100 text-blue-700 px-2 py-1 text-xs">
+            <span className="hidden sm:inline-flex items-center rounded-md bg-blue-100 text-blue-700 px-2 py-1 text-xs">
               Streaming…
             </span>
           )}
           {isErrored && (
-            <span className="inline-flex items-center rounded-md bg-red-100 text-red-700 px-2 py-1 text-xs">
+            <span className="hidden sm:inline-flex items-center rounded-md bg-red-100 text-red-700 px-2 py-1 text-xs">
               Error
             </span>
           )}
@@ -236,7 +236,7 @@ export const ChatWindow = ({
         resize="smooth"
         initial="smooth"
       >
-        <StickToBottom.Content className="px-4 py-4 space-y-4">
+        <StickToBottom.Content className="px-2 py-3 sm:px-4 sm:py-4 space-y-2 sm:space-y-4">
           {messages.map((m) => {
             const isUser = m.role === "user";
             return (
@@ -246,7 +246,7 @@ export const ChatWindow = ({
               >
                 <div
                   className={[
-                    "max-w-[80%] rounded-2xl px-4 py-3 shadow-sm",
+                    "max-w-[85%] sm:max-w-[80%] md:max-w-[75%] rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-sm",
                     isUser
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-900",
@@ -260,11 +260,11 @@ export const ChatWindow = ({
 
           {lastAssistantStreaming && (
             <div className="flex justify-start">
-              <div className="bg-gray-100 text-gray-700 px-4 py-2 rounded-2xl shadow-sm">
-                <span className="inline-flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
+              <div className="bg-gray-100 text-gray-700 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl sm:rounded-2xl shadow-sm">
+                <span className="inline-flex items-center gap-2 text-xs sm:text-sm">
+                  <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-gray-500 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-gray-500" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-gray-500" />
                   </span>
                   Thinking…
                 </span>
@@ -274,7 +274,7 @@ export const ChatWindow = ({
 
           {isErrored && (
             <div className="flex justify-center">
-              <div className="w-full max-w-md text-sm text-red-700 bg-red-50 border border-red-200 px-3 py-2 rounded-md">
+              <div className="w-full max-w-md text-xs sm:text-sm text-red-700 bg-red-50 border border-red-200 px-2 py-1.5 sm:px-3 sm:py-2 rounded-md">
                 Something went wrong. Please try again.
               </div>
             </div>
@@ -285,8 +285,8 @@ export const ChatWindow = ({
       </StickToBottom>
 
       {/* Composer */}
-      <div className="border-t bg-white p-3">
-        <div className="flex items-end gap-2">
+      <div className="border-t bg-white p-2 sm:p-3">
+        <div className="flex items-end gap-1.5 sm:gap-2">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -298,7 +298,7 @@ export const ChatWindow = ({
                 ? "Fix or retry…"
                 : "Ask anything…"
             }
-            className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50"
+            className="flex-1 resize-none rounded-lg border border-gray-300 px-2.5 py-1.5 sm:px-3 sm:py-2 text-sm sm:text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 min-h-[44px]"
             rows={2}
             disabled={!isReady}
           />
@@ -307,7 +307,7 @@ export const ChatWindow = ({
             <button
               type="button"
               onClick={() => stop()}
-              className="shrink-0 rounded-lg border border-gray-300 px-3 py-2 text-gray-700 hover:bg-gray-50"
+              className="shrink-0 rounded-lg border border-gray-300 px-2.5 py-2 sm:px-3 text-sm sm:text-base text-gray-700 hover:bg-gray-50"
             >
               Stop
             </button>
@@ -315,7 +315,7 @@ export const ChatWindow = ({
             <button
               type="button"
               onClick={() => regenerate()}
-              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+              className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 sm:px-4 text-sm sm:text-base text-white hover:bg-blue-700"
             >
               Retry
             </button>
@@ -324,14 +324,14 @@ export const ChatWindow = ({
               type="button"
               onClick={handleSubmit}
               disabled={!input.trim()}
-              className="shrink-0 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+              className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 sm:px-4 text-sm sm:text-base text-white hover:bg-blue-700 disabled:opacity-50"
             >
               Send
             </button>
           )}
         </div>
 
-        <div className="mt-1 text-[11px] text-gray-500">
+        <div className="mt-0.5 sm:mt-1 text-[10px] sm:text-[11px] text-gray-500">
           Enter to send • Shift+Enter for newline
         </div>
       </div>
@@ -347,11 +347,11 @@ const ScrollToBottomButton = () => {
   return (
     <button
       onClick={() => scrollToBottom("smooth")}
-      className="absolute bottom-4 right-4 rounded-full bg-blue-600 text-white p-3 shadow-lg hover:bg-blue-700 transition-colors z-10"
+      className="absolute bottom-20 right-3 sm:bottom-4 sm:right-4 rounded-full bg-blue-600 text-white p-2.5 sm:p-3 shadow-lg hover:bg-blue-700 transition-colors z-10"
       aria-label="Scroll to bottom"
     >
       <svg
-        className="w-5 h-5"
+        className="w-4 h-4 sm:w-5 sm:h-5"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
