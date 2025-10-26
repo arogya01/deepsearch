@@ -4,9 +4,9 @@ import { ChatWindow } from "../../components/chat-window";
 export default async function ChatPage({
   params,
 }: {
-  params: { chatId: string };
+  params: Promise<{ chatId: string }>;
 }) {
-  const chatId = await params.chatId;
+  const chatId = (await params).chatId;
   const messages = await fetchChatMessages(chatId);
 
   return (
