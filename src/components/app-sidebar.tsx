@@ -15,6 +15,8 @@ import {
 import { fetchSidebarSessions } from "@/app/actions/chat";
 import { UserButton } from "@clerk/nextjs";
 
+export const dynamic = "force-dynamic";
+
 export async function AppSidebar() {
   const sessions = await fetchSidebarSessions();
   console.log({ sessions });

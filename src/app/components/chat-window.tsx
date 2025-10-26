@@ -9,6 +9,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { ToolCallCard } from "./tool-call-card";
 import { generateNanoId } from "@/app/utils/common";
+import { revalidateSidebar } from "@/app/actions/chat";
 
 import type { UIMessage } from "ai";
 
@@ -117,10 +118,13 @@ export const ChatWindow = ({
     id: sessionId,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
     messages: initialMessages,
-    onFinish: () => {
+    onFinish: async () => {
       if (newChat) {
         router.push(`/chat/${sessionId}`);
       }
+      // Revalidate sidebar to show updated chat list
+      await revalidateSidebar();
+      router.refresh();
     },
     onData: ({ data, type }) => {
       // Handle custom data-session part from backend (for validation/confirmation)
