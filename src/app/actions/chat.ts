@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { ensureUserExists } from "@/server/auth/user-sync";
 import { getSessionWithMessages, getUserSessions } from "@/server/db/chat-persistence";
 import { UIMessage } from "ai";
+import { revalidatePath } from "next/cache";
 
 export async function fetchSidebarSessions(
   limit = 20
@@ -34,4 +35,8 @@ export async function fetchChatMessages(sessionId: string): Promise<UIMessage[]>
     return [];
   }
   return session.messages;
+}
+
+export async function revalidateSidebar() {
+  revalidatePath('/chat', 'layout');
 }
