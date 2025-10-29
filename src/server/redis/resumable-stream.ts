@@ -1,12 +1,16 @@
 import { createResumableStreamContext, type ResumableStreamContext } from "resumable-stream/ioredis";
 import {after} from 'next/server'; 
+import { getRedisClient } from './index';
 
 let globalStreamContext: ResumableStreamContext | null = null;
 
 export function getStreamContext ()  {
   if(!globalStreamContext) {
     try{
+        const redisClient = getRedisClient();
         globalStreamContext = createResumableStreamContext({
+            publisher: redisClient,
+            subscriber: redisClient,
             keyPrefix: 'resumable-stream:',
             waitUntil: after
         })

@@ -1,5 +1,5 @@
 // app/api/chat/route.ts
-import { streamText, convertToModelMessages, type UIMessage, tool, stepCountIs } from 'ai';
+import { streamText, convertToModelMessages, type UIMessage, tool, stepCountIs, generateId } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { currentUser } from '@clerk/nextjs/server';
@@ -22,6 +22,7 @@ import {
 } from "@langfuse/tracing";
 import { trace } from "@opentelemetry/api";
 import { langfuseSpanProcessor } from "../../../instrumentation";
+import { getStreamContext } from '@/server/redis/resumable-stream';
 
 
 export const maxDuration = 30; // optional for long streams
@@ -52,6 +53,9 @@ export async function POST(req: Request) {
   // Create or get existing chat session
   const { sessionId, isNew } = await createOrGetSession(user.id, id);
   console.log(`Chat session: ${sessionId} (${isNew ? 'new' : 'existing'})`);
+
+  // Clear any previous active stream when starting a new message
+  await updateSessionMetadata(sessionId, { activeStreamId: null });
 
   // Load existing messages if this is a continuing conversation
   let allMessages = messages;
@@ -120,6 +124,9 @@ export async function POST(req: Request) {
         updateActiveTrace({
           output: result.content,
         });
+   
+        // Clear the active stream when finished
+        await updateSessionMetadata(sessionId, { activeStreamId: null });
    
         // End span manually after stream has finished
         trace.getActiveSpan()?.end();
@@ -242,9 +249,21 @@ export async function POST(req: Request) {
 
     after(async () => await langfuseSpanProcessor.forceFlush());
 
-    // Return the stream response
-    // Note: Session data is sent via the custom transport mechanism on the client
-    return result.toUIMessageStreamResponse();
+    // Return the stream response with resumable stream support
+    return result.toUIMessageStreamResponse({
+      async consumeSseStream({ stream }) {
+        const streamId = generateId();
+        const streamContext = getStreamContext();
+        
+        // Create resumable stream and store in Redis
+        await streamContext.createNewResumableStream(streamId, () => stream);
+        
+        // Save the stream ID to the session for resumption
+        await updateSessionMetadata(sessionId, { activeStreamId: streamId });
+        
+        console.log(`Created resumable stream: ${streamId} for session: ${sessionId}`);
+      }
+    });
   }catch (err) {
     console.error('Error in chat route:', err);
     return new Response(JSON.stringify({ error: 'Something went wrong.' }), {

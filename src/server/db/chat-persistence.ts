@@ -50,6 +50,15 @@ export async function createOrGetSession(
 }
 
 /**
+ * Gets a chat session by ID (without messages)
+ */
+export async function getSession(sessionId: string) {
+  return await db.query.chatSessions.findFirst({
+    where: eq(chatSessions.id, sessionId)
+  });
+}
+
+/**
  * Updates session metadata (title, message count, last message time)
  */
 export async function updateSessionMetadata(
@@ -71,6 +80,9 @@ export async function updateSessionMetadata(
   }
   if (metadata.isActive !== undefined) {
     updateData.isActive = metadata.isActive;
+  }
+  if (metadata.activeStreamId !== undefined) {
+    updateData.activeStreamId = metadata.activeStreamId;
   }
 
   await db

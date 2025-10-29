@@ -15,6 +15,7 @@ export interface UpdateSessionMetadata {
   messageCount?: number;
   lastMessageAt?: Date;
   isActive?: boolean;
+  activeStreamId?: string | null;
 }
 
 // ============================================================================
