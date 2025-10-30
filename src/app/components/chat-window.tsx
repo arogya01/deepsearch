@@ -169,9 +169,7 @@ export const ChatWindow = ({
               default:
                 if (isToolMessagePart(part)) {
                   const toolPart = normalizeToolMessagePart(part);
-                  if (toolPart.toolName === "searchWeb") {
-                    return <ToolCallCard key={idx} part={toolPart} />;
-                  }
+                  return <ToolCallCard key={idx} part={toolPart} />;
                 }
                 return null;
             }
