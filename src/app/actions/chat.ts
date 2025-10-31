@@ -30,7 +30,6 @@ export async function fetchSidebarSessions(
 
 export async function fetchChatMessages(sessionId: string): Promise<UIMessage[]>{
   const session = await getSessionWithMessages(sessionId);
-  console.log({ session });
   if (!session) {
     return [];
   }
