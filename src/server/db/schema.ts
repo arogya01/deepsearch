@@ -92,6 +92,19 @@ export const messageParts = pgTable('message_parts', {
     .on(table.messageId, table.isFinal),
 }));
 
+// TODO: This table was created for stream metadata tracking but is not currently used
+// Current implementation stores only activeStreamId in chatSessions table
+// Stream state is managed entirely in Redis via resumable-stream package
+//
+// Future enhancements could use this table to:
+// - Track stream lifecycle (active -> completed/expired/cancelled)
+// - Store cursor position for better resume point tracking
+// - Maintain audit trail of stream history
+// - Enable stream analytics (completion rate, duration, etc.)
+//
+// Consider either:
+// 1. Implement full stream tracking using this table
+// 2. Remove this table if not needed (simplify schema)
 export const resumableStreams = pgTable('resumable_streams', {
   id: text('id').primaryKey(),
   sessionId: text('session_id')
