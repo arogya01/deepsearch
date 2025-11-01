@@ -107,7 +107,6 @@ export const ChatWindow = ({
   const sessionId = useMemo(() => {
     return chatId || `chat_${generateNanoId()}`;
   }, [chatId]);
-  console.log({ sessionId });
   const {
     messages,
     sendMessage,
@@ -126,23 +125,6 @@ export const ChatWindow = ({
       await revalidateSidebar();
       router.refresh();
     },
-    onData: ({ data, type }) => {
-      // Handle custom data-session part from backend (for validation/confirmation)
-      if (type === "data-session") {
-        // Backend confirms the session ID
-        // We already have the sessionId generated client-side, so this is mainly for validation
-        const backendSessionId = (data as { sessionId: string; isNew: boolean })
-          .sessionId;
-
-        // Log if there's a mismatch (shouldn't happen in normal flow)
-        console.log({ backendSessionId, sessionId });
-        if (backendSessionId !== sessionId) {
-          console.warn(
-            `Session ID mismatch: client=${sessionId}, backend=${backendSessionId}`
-          );
-        }
-      }
-    },
   });
 
   const isSubmitted = status === "submitted";
@@ -151,7 +133,6 @@ export const ChatWindow = ({
   const isErrored = status === "error";
 
   const renderMessageContent = (m: UIMessage) => {
-    console.log({ m });
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       return (
         <div className="whitespace-pre-wrap break-words">
