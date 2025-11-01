@@ -1,5 +1,5 @@
 // app/api/chat/route.ts
-import { streamText, convertToModelMessages, type UIMessage, tool, stepCountIs } from 'ai';
+import { streamText, convertToModelMessages, type UIMessage, tool, stepCountIs, generateId } from 'ai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 import { currentUser } from '@clerk/nextjs/server';
@@ -22,6 +22,7 @@ import {
 } from "@langfuse/tracing";
 import { trace } from "@opentelemetry/api";
 import { langfuseSpanProcessor } from "../../../instrumentation";
+import { getStreamContext } from '@/server/redis/resumable-stream';
 
 
 export const maxDuration = 30; // optional for long streams
@@ -53,6 +54,9 @@ export async function POST(req: Request) {
   const { sessionId, isNew } = await createOrGetSession(user.id, id);
   console.log(`Chat session: ${sessionId} (${isNew ? 'new' : 'existing'})`);
 
+  // Clear any previous active stream when starting a new message
+  await updateSessionMetadata(sessionId, { activeStreamId: null });
+
   // Load existing messages if this is a continuing conversation
   let allMessages = messages;
   if (!isNew && messages.length === 0) {
@@ -66,12 +70,8 @@ export async function POST(req: Request) {
       model: google('gemini-2.5-flash'),
       experimental_telemetry: {
         isEnabled: true,
-        // metadata: { 
-        //   langfusePrompt: prompt.toJSON() // This links the Generation to your prompt in Langfuse
-        // },
       },
       messages: convertToModelMessages(allMessages),
-      abortSignal: req.signal,
       system: [
         'You are a helpful assistant that can search the web for information.', 
         'Use the searchWeb tool to search the web for information when needed.',
@@ -114,17 +114,34 @@ export async function POST(req: Request) {
         }
       },
       onFinish: async (result) => {
+        console.log(`[STREAM-FINISH] Stream completed successfully`, {
+          sessionId,
+          finishReason: result.finishReason,
+          usage: result.usage,
+          timestamp: new Date().toISOString()
+        });
+
         updateActiveObservation({
           output: result.content,
         });
         updateActiveTrace({
           output: result.content,
         });
-   
+
+        // Clear the active stream when finished
+        await updateSessionMetadata(sessionId, { activeStreamId: null });
+        console.log(`[STREAM-FINISH] Cleared activeStreamId for session ${sessionId}`);
+
         // End span manually after stream has finished
         trace.getActiveSpan()?.end();
       },
       onError: async (error) => {
+        console.error(`[STREAM-ERROR] Stream encountered error`, {
+          sessionId,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
+        });
+
         updateActiveObservation({
           output: error,
           level: "ERROR"
@@ -132,7 +149,11 @@ export async function POST(req: Request) {
         updateActiveTrace({
           output: error,
         });
-   
+
+        // Clear the active stream when error occurs
+        await updateSessionMetadata(sessionId, { activeStreamId: null });
+        console.log(`[STREAM-ERROR] Cleared activeStreamId for session ${sessionId} after error`);
+
         // End span manually after stream has finished
         trace.getActiveSpan()?.end();
       },
@@ -242,9 +263,46 @@ export async function POST(req: Request) {
 
     after(async () => await langfuseSpanProcessor.forceFlush());
 
-    // Return the stream response
-    // Note: Session data is sent via the custom transport mechanism on the client
-    return result.toUIMessageStreamResponse();
+    // Return the stream response with resumable stream support
+    return result.toUIMessageStreamResponse({
+      async consumeSseStream({ stream }) {
+        const streamId = generateId();
+        const timestamp = new Date().toISOString();
+
+        console.log(`[STREAM-CREATE] Starting stream creation`, {
+          streamId,
+          sessionId,
+          timestamp,
+          user: user.clerkId
+        });
+
+        const streamContext = await getStreamContext();
+
+        try {
+          // Create resumable stream and store in Redis
+          await streamContext.createNewResumableStream(streamId, () => stream);
+
+          // Save the stream ID to the session for resumption
+          await updateSessionMetadata(sessionId, { activeStreamId: streamId });
+
+          console.log(`[STREAM-CREATE] ✓ Successfully created resumable stream`, {
+            streamId,
+            sessionId,
+            timestamp,
+            ttl: '24 hours'
+          });
+        } catch (error) {
+          console.error(`[STREAM-CREATE] ✗ Failed to create resumable stream`, {
+            streamId,
+            sessionId,
+            timestamp,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          // If stream creation fails, still return the stream but without resumability
+          throw error;
+        }
+      }
+    });
   }catch (err) {
     console.error('Error in chat route:', err);
     return new Response(JSON.stringify({ error: 'Something went wrong.' }), {
