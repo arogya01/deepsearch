@@ -143,7 +143,16 @@ export async function POST(req: Request) {
       const response = await result.response;
       try {
         console.log('Stream finished, saving to database...');
-        
+
+        // Extract token usage information from response
+        const usage = response.usage ? {
+          promptTokens: response.usage.promptTokens,
+          completionTokens: response.usage.completionTokens,
+          totalTokens: response.usage.totalTokens,
+        } : undefined;
+
+        console.log('Token usage:', usage);
+
         // Extract tool calls and results from response.messages
         // response.messages contains the full conversation including tool activity
         // ModelMessage uses 'input' for tool calls and 'output' for tool results
@@ -158,7 +167,7 @@ export async function POST(req: Request) {
           toolName: string;
           result: unknown;
         }> = [];
-        
+
         if (response.messages) {
           for (const message of response.messages) {
             if (message.role === 'assistant' && 'content' in message) {
@@ -196,7 +205,7 @@ export async function POST(req: Request) {
             }
           }
         }
-        
+
         // Build merged parts array: tool calls, tool results, then final text
         // Note: We store tool parts in a simplified format for database persistence
         // The UI will handle rendering these parts correctly
@@ -204,17 +213,18 @@ export async function POST(req: Request) {
           ...toolParts,
           ...(finalText ? [{ type: 'text' as const, text: finalText }] : []),
         ];
-        
+
         // Convert response to UIMessage format for storage with all parts
         // Cast to UIMessage since our storage format is simpler than the streaming format
         const assistantMessage: UIMessage = {
           id: response.id,
           role: 'assistant',
           parts: mergedParts as unknown as UIMessage['parts'],
+          metadata: usage ? { usage } : undefined,
         };
-        
+
         console.log(`Assistant message has ${mergedParts.length} parts (${toolParts.length} tool parts, ${finalText ? 1 : 0} text part)`);
-        
+
         const finishedMessages = [...allMessages, assistantMessage];
         await saveMessages(sessionId, finishedMessages);
 
