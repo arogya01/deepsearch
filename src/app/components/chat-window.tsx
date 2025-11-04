@@ -8,6 +8,7 @@ import { Streamdown } from "streamdown";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { ToolCallCard } from "./tool-call-card";
+import { ContextPanel } from "./context-panel";
 import { generateNanoId } from "@/app/utils/common";
 import { revalidateSidebar } from "@/app/actions/chat";
 
@@ -103,6 +104,7 @@ export const ChatWindow = ({
   initialMessages?: UIMessage[];
 }) => {
   const [input, setInput] = useState("");
+  const [isContextPanelOpen, setIsContextPanelOpen] = useState(false);
   const router = useRouter();
   const sessionId = useMemo(() => {
     return chatId || `chat_${generateNanoId()}`;
@@ -183,7 +185,13 @@ export const ChatWindow = ({
   }, [messages, isSubmitted, isStreaming]);
 
   return (
-    <div className="w-full flex flex-col h-screen">
+    <div className="w-full flex h-screen relative">
+      {/* Main Chat Area */}
+      <div
+        className={`flex flex-col flex-1 transition-all duration-300 ${
+          isContextPanelOpen ? 'mr-80' : 'mr-0'
+        }`}
+      >
       {/* Header */}
       <div className="bg-gray-50 px-3 py-2 md:px-4 md:py-3 border-b flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -208,6 +216,26 @@ export const ChatWindow = ({
               Error
             </span>
           )}
+          <button
+            onClick={() => setIsContextPanelOpen(!isContextPanelOpen)}
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 hover:bg-gray-100 transition-colors text-xs text-gray-700"
+            aria-label="Toggle context panel"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            <span>Context</span>
+          </button>
         </div>
       </div>
 
@@ -316,6 +344,14 @@ export const ChatWindow = ({
           Enter to send • Shift+Enter for newline
         </div>
       </div>
+      </div>
+
+      {/* Context Panel */}
+      <ContextPanel
+        messages={messages}
+        isOpen={isContextPanelOpen}
+        onToggle={() => setIsContextPanelOpen(!isContextPanelOpen)}
+      />
     </div>
   );
 };
