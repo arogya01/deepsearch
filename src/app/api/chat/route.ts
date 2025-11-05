@@ -19,6 +19,7 @@ import { after } from 'next/server';
 import {
   updateActiveObservation,
   updateActiveTrace,
+  observe
 } from "@langfuse/tracing";
 import { trace } from "@opentelemetry/api";
 import { langfuseSpanProcessor } from "../../../instrumentation";
@@ -27,7 +28,7 @@ import { performWebScrape } from '@/server/search/web-scraper';
 
 export const maxDuration = 30; // optional for long streams
 
-export async function POST(req: Request) {
+async function handler(req: Request) {
 
   try {
     // Authenticate user with Clerk
@@ -140,6 +141,7 @@ export async function POST(req: Request) {
         });
         updateActiveTrace({
           output: result.content,
+          sessionId: sessionId,
         });
 
         // End span manually after stream has finished
@@ -275,3 +277,8 @@ export async function POST(req: Request) {
   }
 }
 
+export const POST = observe(handler, {
+  name: "Chat API Handler",
+  endOnExit: false
+
+})
