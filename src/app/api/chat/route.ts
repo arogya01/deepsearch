@@ -114,13 +114,18 @@ export async function POST(req: Request) {
         }
       },
       onFinish: async (result) => {
+        console.log('=== onFinish callback ===');
+        console.log('Result keys:', Object.keys(result));
+        console.log('Usage:', JSON.stringify(result.usage, null, 2));
+        console.log('Total Usage:', JSON.stringify(result.totalUsage, null, 2));
+
         updateActiveObservation({
           output: result.content,
         });
         updateActiveTrace({
           output: result.content,
         });
-   
+
         // End span manually after stream has finished
         trace.getActiveSpan()?.end();
       },
@@ -145,13 +150,19 @@ export async function POST(req: Request) {
         console.log('Stream finished, saving to database...');
 
         // Extract token usage information from response
-        const usage = response.usage ? {
-          promptTokens: response.usage.promptTokens,
-          completionTokens: response.usage.completionTokens,
-          totalTokens: response.usage.totalTokens,
+        // For multi-step calls, totalUsage contains cumulative usage across all steps
+        // For single-step, we use response.usage
+        // AI SDK v5 uses: inputTokens, outputTokens, totalTokens
+        const usageData = response.totalUsage || response.usage;
+
+        const usage = usageData ? {
+          promptTokens: usageData.inputTokens || 0,
+          completionTokens: usageData.outputTokens || 0,
+          totalTokens: usageData.totalTokens || 0,
         } : undefined;
 
-        console.log('Token usage:', usage);
+        console.log('Raw usage data:', JSON.stringify(usageData, null, 2));
+        console.log('Mapped token usage:', usage);
 
         // Extract tool calls and results from response.messages
         // response.messages contains the full conversation including tool activity
