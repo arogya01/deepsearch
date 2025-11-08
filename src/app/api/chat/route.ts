@@ -64,18 +64,38 @@ async function handler(req: Request) {
       }
     }
 
+    // Get current date and time for context
+    const currentDateTime = new Date();
+    const formattedDate = currentDateTime.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const formattedTime = currentDateTime.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short'
+    });
+
     const result = streamText({
       model: google('gemini-2.5-flash'),
       experimental_telemetry: {
         isEnabled: true,
-        // metadata: { 
+        // metadata: {
         //   langfusePrompt: prompt.toJSON() // This links the Generation to your prompt in Langfuse
         // },
       },
       messages: convertToModelMessages(allMessages),
       abortSignal: req.signal,
       system: [
+        `Current date and time: ${formattedDate} at ${formattedTime}`,
         'You are a helpful assistant that can search the web for information.',
+        'IMPORTANT: When formulating search queries, always consider temporal context:',
+        '- For time-sensitive queries (news, events, current status), include relevant date qualifiers (e.g., "2025", "latest", "current", "today")',
+        '- Consider whether the user is asking about recent, current, or historical information',
+        '- If a user asks about "recent" or "latest" information, include the current year or month in your search query',
+        '- Be aware that information may be outdated, and prioritize recent sources when relevance depends on timeliness',
         'Use the searchWeb tool to search the web for information when needed. and extract more deep information about the specific URLs using the webScraper tool.',
         'After getting search results, provide a comprehensive answer based on the information found.',
         'Do not fabricate information - always use the search tool to get real data.',
@@ -83,14 +103,14 @@ async function handler(req: Request) {
       ].join('\n'),
       tools: {
         webScraper: tool({
-          description: 'Scrape content from a given URL. Use this to extract information from web pages.',
+          description: 'Scrape content from a given URL. Use this to extract information from web pages. Note that the content may have a publication date - consider its recency when answering time-sensitive questions.',
           inputSchema: z.object({
             urlToCrawl: z
               .url()
               .min(1)
               .max(500)
               .describe('The URL to crawl (including http:// or https://)'),
-          }), 
+          }),
           execute: async ({ urlToCrawl }) => {
             console.log('Executing webScraper tool for URL:', urlToCrawl);
             try {
@@ -104,9 +124,9 @@ async function handler(req: Request) {
           }
         }),
         searchWeb: tool({
-          description: 'Search the web for a given query. Use this to find current, factual information.',
+          description: 'Search the web for a given query. Use this to find current, factual information. When the query is time-sensitive (news, events, latest updates), include temporal qualifiers like the current year, month, or terms like "latest" or "recent" to get the most up-to-date results.',
           inputSchema: z.object({
-            query: z.string().describe('The search query to look up')
+            query: z.string().describe('The search query to look up. For time-sensitive queries, include relevant date context (e.g., year, "latest", "recent", "current").')
           }),
           execute: async ({ query }) => {
             console.log('Executing searchWeb tool for query:', query);
