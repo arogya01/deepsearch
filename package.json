@@ -17,7 +17,7 @@
     "redis:stop": "docker stop deepsearch-redis",
     "redis:logs": "docker logs -f deepsearch-redis",
     "redis:cli": "docker exec -it deepsearch-redis redis-cli -a arogya30",
-    "redis:insight": "open -a RedisInsight", 
+    "redis:insight": "open -a RedisInsight",
     "evals:run": "evalite watch"
   },
   "dependencies": {
@@ -38,7 +38,6 @@
     "ai": "5.0.27",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
-    "dotenv": "17.2.2",
     "drizzle-kit": "0.31.4",
     "drizzle-orm": "0.44.5",
     "ioredis": "^5.3.2",
@@ -60,6 +59,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoevals": "0.0.131",
+    "dotenv": "17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "evalite": "0.19.0",
