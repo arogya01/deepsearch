@@ -118,25 +118,6 @@ export const ChatWindow = ({
     }
   }, [input]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape to stop generation
-      if (e.key === "Escape" && (isSubmitted || isStreaming)) {
-        e.preventDefault();
-        stop();
-      }
-
-      // Ctrl/Cmd + / or Ctrl/Cmd + K to focus input
-      if ((e.metaKey || e.ctrlKey) && (e.key === "/" || e.key === "k")) {
-        e.preventDefault();
-        textareaRef.current?.focus();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isSubmitted, isStreaming, stop]);
   const {
     messages,
     sendMessage,
@@ -161,6 +142,26 @@ export const ChatWindow = ({
   const isStreaming = status === "streaming";
   const isReady = status === "ready";
   const isErrored = status === "error";
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape to stop generation
+      if (e.key === "Escape" && (isSubmitted || isStreaming)) {
+        e.preventDefault();
+        stop();
+      }
+
+      // Ctrl/Cmd + / or Ctrl/Cmd + K to focus input
+      if ((e.metaKey || e.ctrlKey) && (e.key === "/" || e.key === "k")) {
+        e.preventDefault();
+        textareaRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSubmitted, isStreaming, stop]);
 
   const getMessageText = (m: UIMessage): string => {
     if (Array.isArray(m.parts) && m.parts.length > 0) {
