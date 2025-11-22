@@ -3,6 +3,8 @@ import { stepCountIs, streamText, tool } from "ai";
 import { z } from "zod";
 import { performWebScrape } from "./web-scraper";
 import { performWebSearch } from "./web-search";
+import { updateActiveObservation, updateActiveTrace } from "@langfuse/tracing";
+import { trace } from "@opentelemetry/api";
 
 export function streamDeepSearch({
     user, 

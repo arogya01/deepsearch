@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Redis from 'ioredis';
 
 // Redis client singleton
@@ -8,7 +9,6 @@ export function getRedisClient(): Redis {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     
     redis = new Redis(redisUrl, {
-      retryDelayOnFailover: 100,
       maxRetriesPerRequest: 3,
       lazyConnect: true,
     });
