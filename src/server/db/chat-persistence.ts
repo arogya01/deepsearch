@@ -172,50 +172,50 @@ async function upsertMessage(
     });
 }
 
-/**
- * Inserts a new message into the database
- */
-async function insertMessage(
-  sessionId: string,
-  message: UIMessage,
-  sequence: number
-): Promise<void> {
-  const isCompleted = message.parts.some(part => 
-    'isFinal' in part && part.isFinal
-  );
+// /**
+//  * Inserts a new message into the database
+//  */
+// async function insertMessage(
+//   sessionId: string,
+//   message: UIMessage,
+//   sequence: number
+// ): Promise<void> {
+//   const isCompleted = message.parts.some(part => 
+//     'isFinal' in part && part.isFinal
+//   );
 
-  const messageData: SaveMessageParams = {
-    id: message.id,
-    sessionId,
-    sequence,
-    role: message.role,
-    status: isCompleted ? 'completed' : 'streaming',
-    content: null, // We store content in message_parts
-    metadata: {},
-    startedAt: new Date(),
-    completedAt: isCompleted ? new Date() : undefined,
-  };
+//   const messageData: SaveMessageParams = {
+//     id: message.id,
+//     sessionId,
+//     sequence,
+//     role: message.role,
+//     status: isCompleted ? 'completed' : 'streaming',
+//     content: null, // We store content in message_parts
+//     metadata: {},
+//     startedAt: new Date(),
+//     completedAt: isCompleted ? new Date() : undefined,
+//   };
 
-  await db.insert(messages).values(messageData);
-}
+//   await db.insert(messages).values(messageData);
+// }
 
-/**
- * Updates an existing message
- */
-async function updateMessage(message: UIMessage): Promise<void> {
-  const isCompleted = message.parts.some(part => 
-    'isFinal' in part && part.isFinal
-  );
+// /**
+//  * Updates an existing message
+//  */
+// async function updateMessage(message: UIMessage): Promise<void> {
+//   const isCompleted = message.parts.some(part => 
+//     'isFinal' in part && part.isFinal
+//   );
 
-  await db
-    .update(messages)
-    .set({
-      status: isCompleted ? 'completed' : 'streaming',
-      completedAt: isCompleted ? new Date() : undefined,
-      updatedAt: new Date(),
-    })
-    .where(eq(messages.id, message.id));
-}
+//   await db
+//     .update(messages)
+//     .set({
+//       status: isCompleted ? 'completed' : 'streaming',
+//       completedAt: isCompleted ? new Date() : undefined,
+//       updatedAt: new Date(),
+//     })
+//     .where(eq(messages.id, message.id));
+// }
 
 /**
  * Saves message parts (text, tool calls, tool results) to the database

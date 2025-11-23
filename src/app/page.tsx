@@ -1,104 +1,205 @@
+"use client";
+
 import { SignInButton, SignUpButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import Link from 'next/link';
+import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import { Search, Sparkles, Globe, Layers } from 'lucide-react';
+import { useRef, useState } from 'react';
+
+// Magnetic Button Component
+function MagneticButton({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+
+  const handleMouse = (e: React.MouseEvent) => {
+    const { clientX, clientY } = e;
+    const { left, top, width, height } = ref.current!.getBoundingClientRect();
+    const x = clientX - (left + width / 2);
+    const y = clientY - (top + height / 2);
+    setPosition({ x, y });
+  };
+
+  const reset = () => setPosition({ x: 0, y: 0 });
+
+  const { x, y } = position;
+
+  return (
+    <motion.button
+      ref={ref}
+      className={className}
+      onMouseMove={handleMouse}
+      onMouseLeave={reset}
+      animate={{ x: x * 0.2, y: y * 0.2 }}
+      transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
+    >
+      {children}
+    </motion.button>
+  );
+}
+
+// 3D Tilt Card Component
+function TiltCard({ icon, title, description, delay }: { icon: React.ReactNode, title: string, description: string, delay: number }) {
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseX = useSpring(x, { stiffness: 500, damping: 100 });
+  const mouseY = useSpring(y, { stiffness: 500, damping: 100 });
+
+  function onMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
+    const { left, top, width, height } = currentTarget.getBoundingClientRect();
+    x.set(clientX - left - width / 2);
+    y.set(clientY - top - height / 2);
+  }
+
+  const rotateX = useTransform(mouseY, [-100, 100], [5, -5]);
+  const rotateY = useTransform(mouseX, [-100, 100], [-5, 5]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8, delay, ease: "easeOut" }}
+      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+      onMouseMove={onMouseMove}
+      onMouseLeave={() => {
+        x.set(0);
+        y.set(0);
+      }}
+      className="relative group perspective-1000"
+    >
+      <div className="glass-card p-8 rounded-3xl h-full relative overflow-hidden transition-colors duration-500 group-hover:bg-white/10">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        
+        <div className="relative z-10 transform-gpu transition-transform duration-500 group-hover:translate-z-10">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center mb-6 border border-white/10 group-hover:scale-110 transition-transform duration-500 shadow-lg shadow-purple-500/20">
+            {icon}
+          </div>
+          <h3 className="text-2xl font-display font-bold text-white mb-4">{title}</h3>
+          <p className="text-muted-foreground leading-relaxed font-light text-lg">
+            {description}
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-      {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-6 pt-20 pb-16">
-        <div className="text-center space-y-8">
-          {/* Main Heading */}
-          <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 bg-clip-text text-transparent leading-tight">
-              DeepSearch
-            </h1>
-            <p className="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-              AI-powered search that understands context, provides instant answers, and grounds responses with real-time information.
-            </p>
-          </div>
+    <div className="min-h-screen bg-background text-foreground overflow-hidden selection:bg-purple-500/30">
+      {/* Aurora Background */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute top-[-50%] left-[-20%] w-[80%] h-[80%] bg-purple-900/30 rounded-full blur-[150px] animate-aurora mix-blend-screen" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-emerald-900/20 rounded-full blur-[150px] animate-aurora animation-delay-2000 mix-blend-screen" />
+        <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
+      </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+      <main className="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-20">
+        {/* Hero Section */}
+        <div className="flex flex-col items-center text-center space-y-16 mb-40">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            className="space-y-8 max-w-5xl"
+          >
+            <div className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl text-sm font-medium text-white/80 mb-8 shadow-2xl shadow-purple-500/10">
+              <Sparkles className="w-4 h-4 text-purple-400" />
+              <span className="tracking-wide uppercase text-xs">Next Gen Intelligence</span>
+            </div>
+            
+            <h1 className="text-7xl md:text-9xl font-display font-bold tracking-tighter leading-[0.9]">
+              <span className="block text-white drop-shadow-2xl">Search Beyond</span>
+              <span className="aurora-text block">The Surface</span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed font-light">
+              Experience the web through a prism of pure intelligence. Context-aware, grounded, and beautifully instant.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="flex flex-col sm:flex-row gap-6 w-full justify-center items-center"
+          >
             <SignedOut>
               <SignUpButton forceRedirectUrl="/chat">
-                <button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                  Start Searching
-                </button>
+                <MagneticButton className="group relative px-10 py-5 bg-white text-black font-bold rounded-full text-lg shadow-[0_0_50px_-10px_rgba(255,255,255,0.3)] hover:shadow-[0_0_50px_-5px_rgba(255,255,255,0.5)] transition-shadow">
+                  <span className="relative z-10 flex items-center gap-2">
+                    Start Exploring <Search className="w-5 h-5" />
+                  </span>
+                </MagneticButton>
               </SignUpButton>
               <SignInButton forceRedirectUrl="/chat">
-                <button className="border-2 border-slate-300 hover:border-slate-400 text-slate-700 font-semibold px-8 py-4 rounded-xl transition-all duration-200 hover:bg-slate-50">
+                <MagneticButton className="px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-medium rounded-full backdrop-blur-md transition-colors">
                   Sign In
-                </button>
+                </MagneticButton>
               </SignInButton>
             </SignedOut>
             <SignedIn>
               <Link href="/chat">
-                <button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-8 py-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-                  Go to Chat
-                </button>
+                <MagneticButton className="group relative px-10 py-5 bg-white text-black font-bold rounded-full text-lg shadow-[0_0_50px_-10px_rgba(255,255,255,0.3)] hover:shadow-[0_0_50px_-5px_rgba(255,255,255,0.5)] transition-shadow">
+                  <span className="relative z-10 flex items-center gap-2">
+                    Open Terminal <Search className="w-5 h-5" />
+                  </span>
+                </MagneticButton>
               </Link>
             </SignedIn>
-          </div>
+          </motion.div>
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mt-24">
-          <div className="text-center space-y-4 p-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">Intelligent Search</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Advanced AI understands your queries in natural language and provides contextually relevant answers.
-            </p>
-          </div>
-
-          <div className="text-center space-y-4 p-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-blue-100 rounded-2xl flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">Real-time Grounding</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Answers are backed by current web information with proper citations and source verification.
-            </p>
-          </div>
-
-          <div className="text-center space-y-4 p-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto">
-              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-semibold text-slate-800">Instant Insights</h3>
-            <p className="text-slate-600 leading-relaxed">
-              Get comprehensive answers instantly without browsing through multiple search results.
-            </p>
-          </div>
+        <div className="grid md:grid-cols-3 gap-8 perspective-1000">
+          <TiltCard
+            delay={0.2}
+            icon={<Search className="w-8 h-8 text-purple-400" />}
+            title="Semantic Core"
+            description="Understanding intent beyond keywords. Our AI weaves through the web's noise to find the signal you're looking for."
+          />
+          <TiltCard
+            delay={0.4}
+            icon={<Globe className="w-8 h-8 text-emerald-400" />}
+            title="Global Grounding"
+            description="Real-time verification against live data sources. Every insight is anchored in truth, not hallucination."
+          />
+          <TiltCard
+            delay={0.6}
+            icon={<Layers className="w-8 h-8 text-orange-400" />}
+            title="Context Layers"
+            description="Deep memory that builds upon your journey. Peel back layers of information without losing your original thread."
+          />
         </div>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-20 pt-12 border-t border-slate-200">
-          <p className="text-slate-500 mb-6">Ready to experience the future of search?</p>
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, delay: 0.6 }}
+          className="mt-40 text-center relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-t from-purple-900/20 to-transparent blur-3xl -z-10" />
+          <h2 className="text-4xl md:text-6xl font-display font-bold text-white mb-12 tracking-tight">
+            Ready to transcend <br /> <span className="text-white/50">traditional search?</span>
+          </h2>
           <SignedOut>
             <SignUpButton forceRedirectUrl="/chat">
-              <button className="bg-slate-900 hover:bg-slate-800 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200">
-                Get Started Free
-              </button>
+              <MagneticButton className="px-12 py-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full text-xl shadow-2xl shadow-purple-600/30 hover:shadow-purple-600/50 transition-shadow">
+                Initialize System
+              </MagneticButton>
             </SignUpButton>
           </SignedOut>
           <SignedIn>
             <Link href="/chat">
-              <button className="bg-slate-900 hover:bg-slate-800 text-white font-medium px-6 py-3 rounded-lg transition-colors duration-200">
-                Continue to Chat
-              </button>
+              <MagneticButton className="px-12 py-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full text-xl shadow-2xl shadow-purple-600/30 hover:shadow-purple-600/50 transition-shadow">
+                Resume Session
+              </MagneticButton>
             </Link>
           </SignedIn>
-        </div>
-      </div>
+        </motion.div>
+      </main>
     </div>
   );
 }

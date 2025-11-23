@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Redis from 'ioredis';
 
 // Redis client singleton
