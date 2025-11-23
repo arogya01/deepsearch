@@ -1,6 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Redis from 'ioredis';
 
+// Types for cached data
+interface CachedUserData {
+  id: number;
+  clerkId: string;
+  name: string;
+  email: string;
+  profileImageUrl: string | null;
+  subscriptionTier: string;
+  preferences: {
+    theme?: 'light' | 'dark';
+    language?: string;
+    notifications?: boolean;
+  };
+  lastActiveAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface CachedSessionData {
+  [key: string]: unknown;
+}
+
 // Redis client singleton
 let redis: Redis | null = null;
 
@@ -45,7 +67,7 @@ export class UserCache {
   /**
    * Cache user data
    */
-  async setUser(clerkId: string, userData: any): Promise<void> {
+  async setUser(clerkId: string, userData: CachedUserData): Promise<void> {
     const key = this.getUserKey(clerkId);
     await this.redis.setex(key, this.TTL, JSON.stringify(userData));
   }
@@ -53,7 +75,7 @@ export class UserCache {
   /**
    * Get cached user data
    */
-  async getUser(clerkId: string): Promise<any | null> {
+  async getUser(clerkId: string): Promise<CachedUserData | null> {
     const key = this.getUserKey(clerkId);
     const cached = await this.redis.get(key);
     return cached ? JSON.parse(cached) : null;
@@ -71,7 +93,7 @@ export class UserCache {
   /**
    * Cache user session data
    */
-  async setSession(clerkId: string, sessionData: any): Promise<void> {
+  async setSession(clerkId: string, sessionData: CachedSessionData): Promise<void> {
     const key = this.getSessionKey(clerkId);
     await this.redis.setex(key, this.TTL, JSON.stringify(sessionData));
   }
@@ -79,7 +101,7 @@ export class UserCache {
   /**
    * Get cached session data
    */
-  async getSession(clerkId: string): Promise<any | null> {
+  async getSession(clerkId: string): Promise<CachedSessionData | null> {
     const key = this.getSessionKey(clerkId);
     const cached = await this.redis.get(key);
     return cached ? JSON.parse(cached) : null;

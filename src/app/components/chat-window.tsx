@@ -141,16 +141,24 @@ export const ChatWindow = ({
     messages,
     sendMessage,
     status, // 'submitted' | 'streaming' | 'ready' | 'error'
-    stop, // cancel current stream
     regenerate, // retry last failed turn
   } = useChat({
     id: sessionId,
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    resume: !newChat, // Enable automatic stream resumption for existing chats
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      prepareSendMessagesRequest: ({ id, messages }) => ({
+        body: {
+          id,
+          messages,
+        },
+      }),
+    }),
     messages: initialMessages,
-    onFinish: async () => {
-      if (newChat) {
+    onFinish: async () => {   
+      if(newChat){
         router.push(`/chat/${sessionId}`);
-      }
+      }   
       // Revalidate sidebar to show updated chat list
       await revalidateSidebar();
       router.refresh();
@@ -545,15 +553,8 @@ export const ChatWindow = ({
             disabled={!isReady}
           />
 
-          {isSubmitted || isStreaming ? (
-            <button
-              type="button"
-              onClick={() => stop()}
-              className="shrink-0 rounded-lg border border-border bg-background px-2.5 py-2 sm:px-3 text-sm sm:text-base text-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              Stop
-            </button>
-          ) : isErrored ? (
+          {/* Resumable streams enabled - Stop button removed for compatibility */}
+          {isErrored ? (
             <button
               type="button"
               onClick={() => regenerate()}
