@@ -109,6 +109,40 @@ export const ChatWindow = ({
     return chatId || `chat_${generateNanoId()}`;
   }, [chatId]);
 
+  const {
+    messages,
+    sendMessage,
+    status, // 'submitted' | 'streaming' | 'ready' | 'error'
+    regenerate, // retry last failed turn
+    stop,
+  } = useChat({
+    id: sessionId,
+    resume: !newChat, // Enable automatic stream resumption for existing chats
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      prepareSendMessagesRequest: ({ id, messages }) => ({
+        body: {
+          id,
+          messages,
+        },
+      }),
+    }),
+    messages: initialMessages,
+    onFinish: async () => {   
+      if(newChat){
+        router.push(`/chat/${sessionId}`);
+      }   
+      // Revalidate sidebar to show updated chat list
+      await revalidateSidebar();
+      router.refresh();
+    },
+  });
+
+  const isSubmitted = status === "submitted";
+  const isStreaming = status === "streaming";
+  const isReady = status === "ready";
+  const isErrored = status === "error";
+
   // Auto-resize textarea based on content
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -137,38 +171,6 @@ export const ChatWindow = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSubmitted, isStreaming, stop]);
-  const {
-    messages,
-    sendMessage,
-    status, // 'submitted' | 'streaming' | 'ready' | 'error'
-    regenerate, // retry last failed turn
-  } = useChat({
-    id: sessionId,
-    resume: !newChat, // Enable automatic stream resumption for existing chats
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-      prepareSendMessagesRequest: ({ id, messages }) => ({
-        body: {
-          id,
-          messages,
-        },
-      }),
-    }),
-    messages: initialMessages,
-    onFinish: async () => {   
-      if(newChat){
-        router.push(`/chat/${sessionId}`);
-      }   
-      // Revalidate sidebar to show updated chat list
-      await revalidateSidebar();
-      router.refresh();
-    },
-  });
-
-  const isSubmitted = status === "submitted";
-  const isStreaming = status === "streaming";
-  const isReady = status === "ready";
-  const isErrored = status === "error";
 
   const getMessageText = (m: UIMessage): string => {
     if (Array.isArray(m.parts) && m.parts.length > 0) {
@@ -377,7 +379,7 @@ export const ChatWindow = ({
           {messages.map((m, index) => {
             const isUser = m.role === "user";
             const messageText = getMessageText(m);
-            const timestamp = formatTimestamp(m.createdAt);
+            const timestamp = formatTimestamp((m as { createdAt?: string | number | Date }).createdAt);
 
             // Check if previous message is from the same sender
             const previousMessage = index > 0 ? messages[index - 1] : null;
