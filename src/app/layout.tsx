@@ -1,17 +1,12 @@
 import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Syne, Outfit } from "next/font/google";
+import { Inter } from "next/font/google";
 import { ConditionalHeader } from "@/components/conditional-header";
 import "./globals.css";
 
-const syne = Syne({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-syne",
-});
-
-const outfit = Outfit({
-  subsets: ["latin"],
-  variable: "--font-outfit",
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +26,7 @@ export default function RootLayout({
     >
       <html lang="en">
         <body
-          className={`${syne.variable} ${outfit.variable} antialiased font-sans`}
+          className={`${inter.variable} antialiased font-sans`}
         >
           <ConditionalHeader>{children}</ConditionalHeader>
         </body>
