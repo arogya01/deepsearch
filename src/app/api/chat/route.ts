@@ -119,7 +119,6 @@ async function handler(req: Request) {
           }
         })
       },
-      // CRITICAL: Enable multi-step tool calling so model can use tool results in its response
       stopWhen: stepCountIs(5),
       onStepFinish: async ({ toolResults, text }) => {
         if (toolResults && toolResults.length > 0) {
