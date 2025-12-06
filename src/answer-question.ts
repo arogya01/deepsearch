@@ -5,7 +5,7 @@ import { SystemContext } from "./system-context";
 export async function answerQuestion(
   ctx: SystemContext,
   options?: { isFinal?: boolean }
-) {
+): Promise<string> {
   const systemPrompt = options?.isFinal
     ? `You are answering a question with limited information.
     We've reached the maximum number of research steps. 
@@ -15,16 +15,21 @@ export async function answerQuestion(
     Provide a comprehensive answer with citations from the sources found.
     Format citations as [Source Title](URL)`;
 
-  const result = await generateText({
-    model: google("gemini-2.5-flash"),
-    system: systemPrompt,
-    prompt: `Question: ${ctx.getQuestion()}
+  try {
+    const result = await generateText({
+      model: google("gemini-2.5-flash"), 
+      system: systemPrompt,
+      prompt: `Question: ${ctx.getQuestion()}
 
      Research collected:
      ${ctx.getContextSummary()}
 
      Provide a comprehensive answer with citations.`,
-  });
+    });
 
-  return result.text;
+    return result.text || "I was unable to generate an answer. Please try again.";
+  } catch (error) {
+    console.error("Error generating answer:", error);
+    return `I encountered an error while generating the answer: ${error instanceof Error ? error.message : "Unknown error"}`;
+  }
 }
