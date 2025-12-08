@@ -6,10 +6,12 @@ import { performWebScrape } from "./server/search/web-scraper";
 import { getNextAction } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
 
-// Hardcoded userId for standalone script - replace with actual user context in production
-const STANDALONE_USER_ID = 1;
 
-export async function runAgentLoop(question: string) {
+export interface AgentLoopOptions {
+  question: string;
+  userId: number;
+}
+export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
   const ctx = new SystemContext();
   ctx.setQuestion(question);
   ctx.addMessage({ role: "user", content: question });
@@ -28,8 +30,8 @@ export async function runAgentLoop(question: string) {
       case "search": {
         console.log(`🔎 Searching for: "${action.query}"`);
         try {
-          const searchResult = await performWebSearch(action.query, STANDALONE_USER_ID);
-          
+          const searchResult = await performWebSearch(action.query, userId);
+
           // Transform and store the results
           const formattedResults = (searchResult.organic || []).map((item) => ({
             date: new Date().toISOString(),
@@ -54,8 +56,8 @@ export async function runAgentLoop(question: string) {
         for (const url of action.urls) {
           try {
             console.log(`→ ${url}`);
-            const scrapeResult = await performWebScrape(url, STANDALONE_USER_ID);
-            
+            const scrapeResult = await performWebScrape(url, userId);
+
             if (scrapeResult.success && scrapeResult.markdown) {
               scrapeResults.push({
                 url,
@@ -80,7 +82,8 @@ export async function runAgentLoop(question: string) {
         const answer = await answerQuestion(ctx);
         ctx.addMessage({ role: "assistant", content: answer });
         console.log(`\n✨ Answer generated!\n`);
-        return answer;
+        console.log(`\n✨ Answer generated!\n`);
+        return { answer, context: ctx };
       }
 
       default: {
@@ -95,5 +98,5 @@ export async function runAgentLoop(question: string) {
   console.log(`\n⚠️ Max steps reached. Generating best-effort answer...`);
   const finalAnswer = await answerQuestion(ctx, { isFinal: true });
   ctx.addMessage({ role: "assistant", content: finalAnswer });
-  return finalAnswer;
+  return { answer: finalAnswer, context: ctx };
 }

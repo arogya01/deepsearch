@@ -1,7 +1,7 @@
 import { db } from './index';
 import { chatSessions, messages, messageParts } from './schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { type UIMessage } from 'ai';
+import { StreamTextResult, type UIMessage } from 'ai';
 import {
   type UpdateSessionMetadata,
   type SaveMessageParams,
@@ -98,11 +98,11 @@ export function generateSessionTitle(firstMessage: string): string {
   // Truncate to 50 characters and add ellipsis if needed
   const maxLength = 50;
   const trimmed = firstMessage.trim();
-  
+
   if (trimmed.length <= maxLength) {
     return trimmed;
   }
-  
+
   return trimmed.slice(0, maxLength).trim() + '...';
 }
 
@@ -120,7 +120,7 @@ export async function saveMessages(
 ): Promise<void> {
   for (let i = 0; i < uiMessages.length; i++) {
     const message = uiMessages[i];
-    
+
     // Upsert message with sequence - handles conflicts automatically
     await upsertMessage(sessionId, message, i);
 
@@ -138,7 +138,7 @@ async function upsertMessage(
   message: UIMessage,
   sequence: number
 ): Promise<void> {
-  const isCompleted = message.parts.some(part => 
+  const isCompleted = message.parts.some(part =>
     'isFinal' in part && part.isFinal
   );
 
@@ -233,7 +233,7 @@ export async function saveMessageParts(
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     const isFinal = 'isFinal' in part ? Boolean(part.isFinal) : false;
-    
+
     await db.insert(messageParts).values({
       messageId: messageId,
       partIndex: i,
@@ -258,6 +258,141 @@ export async function updateMessageMetadata(
       updatedAt: new Date(),
     })
     .where(eq(messages.id, messageId));
+}
+
+
+export async function persistStreamResult({
+  sessionId,
+  allMessages,
+  result,
+  isNew
+}: {
+  sessionId: string;
+  allMessages: UIMessage[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result: StreamTextResult<any, any>;
+  isNew?: boolean;
+}) {
+  const finalText = await result.text;
+  const response = await result.response;
+
+  console.log('Stream Finished, saving to database');
+
+  const toolParts: Array<{
+    type: 'tool-call';
+    toolCallId: string;
+    toolName: string;
+    args: unknown;
+  } | {
+    type: 'tool-result';
+    toolCallId: string;
+    toolName: string;
+    result: unknown;
+  }> = [];
+
+  if (response.messages) {
+    for (const message of response.messages) {
+      if (message.role === 'assistant' && 'content' in message) {
+        const content = message.content;
+        if (Array.isArray(content)) {
+          for (const part of content) {
+            if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-call') {
+              toolParts.push({
+                type: 'tool-call',
+                toolCallId: part.toolCallId,
+                toolName: part.toolName,
+                args: part.input,
+              });
+            }
+          }
+        }
+      } else if (message.role === 'tool' && 'content' in message) {
+        const content = message.content;
+        if (Array.isArray(content)) {
+          for (const part of content) {
+            if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-result') {
+              toolParts.push({
+                type: 'tool-result',
+                toolCallId: part.toolCallId,
+                toolName: part.toolName,
+                result: part.output,
+              });
+            }
+          }
+        }
+      }
+    }
+  }
+  // Build merged parts array
+  const mergedParts = [
+    ...toolParts,
+    ...(finalText ? [{ type: 'text' as const, text: finalText }] : []),
+  ];
+
+
+  const assistantMessage: UIMessage = {
+    id: response.id,
+    role: 'assistant',
+    parts: mergedParts
+  }
+
+  console.log(`Assitant message has ${mergedParts.length} parts 
+    ${JSON.stringify(mergedParts)}`);
+
+  const finishedMessages = [...allMessages, assistantMessage];
+  await saveMessages(sessionId, finishedMessages);
+
+
+  if (isNew) {
+    const firstUserText = extractFirstUserMessage(finishedMessages);
+    if (firstUserText) {
+      const title = generateSessionTitle(firstUserText);
+      await updateSessionMetadata(sessionId, { title });
+    }
+  }
+
+  // Update session metadata
+  await updateSessionMetadata(sessionId, {
+    messageCount: finishedMessages.length,
+    lastMessageAt: new Date(),
+  });
+  console.log(`Saved ${finishedMessages.length} messages to session ${sessionId}`);
+}
+
+export async function persistAgentResult({
+  sessionId,
+  allMessages,
+  answer,
+  isNew,
+}: {
+  sessionId: string;
+  allMessages: UIMessage[];
+  answer: string;
+  isNew?: boolean;
+}) {
+  const assistantMessage: UIMessage = {
+    id: generateNanoId(),
+    role: 'assistant',
+    parts: [{ type: 'text', text: answer }],
+  };
+
+  const finishedMessages = [...allMessages, assistantMessage];
+  await saveMessages(sessionId, finishedMessages);
+
+  if (isNew) {
+    const firstUserText = extractFirstUserMessage(finishedMessages);
+    if (firstUserText) {
+      const title = generateSessionTitle(firstUserText);
+      await updateSessionMetadata(sessionId, { title });
+    }
+  }
+
+  await updateSessionMetadata(sessionId, {
+    messageCount: finishedMessages.length,
+    lastMessageAt: new Date(),
+  });
+
+  console.log(`Saved agent result to session ${sessionId}`);
 }
 
 // ============================================================================
@@ -354,11 +489,11 @@ export async function getUserSessions(
 function generateNanoId(size: number = 21): string {
   const alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
   let id = '';
-  
+
   for (let i = 0; i < size; i++) {
     id += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
   }
-  
+
   return id;
 }
 
@@ -367,7 +502,7 @@ function generateNanoId(size: number = 21): string {
  */
 export function extractFirstUserMessage(uiMessages: UIMessage[]): string | null {
   const firstUserMessage = uiMessages.find(msg => msg.role === 'user');
-  
+
   if (!firstUserMessage) {
     return null;
   }

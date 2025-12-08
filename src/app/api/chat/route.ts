@@ -1,62 +1,46 @@
-// app/api/chat/route.ts
-import { streamText, convertToModelMessages, type UIMessage, tool, stepCountIs, generateId } from 'ai';
-import { google } from '@ai-sdk/google';
-import { z } from 'zod';
+
+import { type UIMessage } from 'ai';
 import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
-import { performWebSearch } from '@/server/search/web-search';
 import { revalidatePath } from 'next/cache';
 import {
   createOrGetSession,
-  saveMessages,
-  updateSessionMetadata,
-  generateSessionTitle,
-  extractFirstUserMessage,
   getSessionWithMessages,
+  persistAgentResult,
 } from '@/server/db/chat-persistence';
 import { after } from 'next/server';
-import {
-  updateActiveObservation,
-  updateActiveTrace,
-  observe
-} from "@langfuse/tracing";
-import { trace } from "@opentelemetry/api";
-import { langfuseSpanProcessor } from "../../../instrumentation";
-import { getStreamContext } from '@/server/redis/resumable-stream';
-import { performWebScrape } from '@/server/search/web-scraper';
+import { observe, updateActiveTrace } from '@langfuse/tracing';
+import { langfuseSpanProcessor } from '../../../instrumentation';
+import { performDeepSearch } from '@/server/search/deep-search';
 
-
-export const maxDuration = 30; // optional for long streams
+export const maxDuration = 60;
 
 async function handler(req: Request) {
-
   try {
-    // Authenticate user with Clerk
+    // ─────────────────────────────────────────────────────────────
+    // 1. AUTHENTICATION & RATE LIMITING
+    // ─────────────────────────────────────────────────────────────
     const clerkUser = await currentUser();
-
     if (!clerkUser) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    console.log('entering ensureUserExists');
-    // Sync user data and update last active
     const user = await ensureUserExists(clerkUser);
     await userCache.updateLastActive(user.clerkId);
 
-    // Check rate limiting
-    const isLimited = await userCache.isRateLimited(user.clerkId, 'chat', 20, 3600); // 20 requests per hour
+    const isLimited = await userCache.isRateLimited(user.clerkId, 'chat', 20, 3600);
     if (isLimited) {
       return Response.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // 2. SESSION MANAGEMENT
+    // ─────────────────────────────────────────────────────────────
     const { messages, id }: { messages: UIMessage[]; id?: string } = await req.json();
-
-    // Create or get existing chat session
     const { sessionId, isNew } = await createOrGetSession(user.id, id);
+
     console.log(`Chat session: ${sessionId} (${isNew ? 'new' : 'existing'})`);
 
-    // Load existing messages if this is a continuing conversation
     let allMessages = messages;
     if (!isNew && messages.length === 0) {
       const sessionData = await getSessionWithMessages(sessionId);
@@ -65,264 +49,80 @@ async function handler(req: Request) {
       }
     }
 
-    const result = streamText({
-      model: google('gemini-2.5-flash'),
-      experimental_telemetry: {
-        isEnabled: true,
-      },
-      messages: convertToModelMessages(allMessages),
-      system: [
-        'You are a helpful assistant that can search the web for information.',
-        'Use the searchWeb tool to search the web for information when needed. and extract more deep information about the specific URLs using the webScraper tool.',
-        'After getting search results, provide a comprehensive answer based on the information found.',
-        'Do not fabricate information - always use the search tool to get real data.',
-        'If you are not sure about something, say you do not know.',
-      ].join('\n'),
-      tools: {
-        webScraper: tool({
-          description: 'Scrape content from a given URL. Use this to extract information from web pages.',
-          inputSchema: z.object({
-            urlToCrawl: z
-              .url()
-              .min(1)
-              .max(500)
-              .describe('The URL to crawl (including http:// or https://)'),
-          }), 
-          execute: async ({ urlToCrawl }) => {
-            console.log('Executing webScraper tool for URL:', urlToCrawl);
-            try {
-              const result = await performWebScrape(urlToCrawl, user.id);
-              console.log('Web scraping completed successfully', result);
-              return result;
-            } catch (error) {
-              console.error('Error in webScraper tool:', error);
-              throw error;
-            }
-          }
-        }),
-        searchWeb: tool({
-          description: 'Search the web for a given query. Use this to find current, factual information.',
-          inputSchema: z.object({
-            query: z.string().describe('The search query to look up')
-          }),
-          execute: async ({ query }) => {
-            console.log('Executing searchWeb tool for query:', query);
-            try {
-              // Call the shared search function directly with user.id
-              const result = await performWebSearch(query, user.id);
-              console.log('Search completed successfully', result);
-              return result;
-            } catch (error) {
-              console.error('Error in searchWeb tool:', error);
-              throw error;
-            }
-          }
-        })
-      },
-      stopWhen: stepCountIs(5),
-      onStepFinish: async ({ toolResults, text }) => {
-        if (toolResults && toolResults.length > 0) {
-          console.log('Step finished with tool results:', toolResults.map(r => ({
-            toolName: r.toolName,
-            hasOutput: !!r.output
-          })));
-        }
-        if (text) {
-          console.log('Step finished with text length:', text.length);
-        }
-      },
-      onFinish: async (result) => {
-        console.log(`[STREAM-FINISH] Stream completed successfully`, {
-          sessionId,
-          finishReason: result.finishReason,
-          usage: result.usage,
-          timestamp: new Date().toISOString()
-        });
+    // ─────────────────────────────────────────────────────────────
+    // 3. EXECUTE AGENT LOOP
+    // ─────────────────────────────────────────────────────────────
+    // Extract the latest user question
+    const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+    let question = '';
 
-        updateActiveObservation({
-          output: result.content,
-        });
-        updateActiveTrace({
-          output: result.content,
-          sessionId: sessionId,
-        });
-
-        // Clear the active stream when finished
-        await updateSessionMetadata(sessionId, { activeStreamId: null });
-        console.log(`[STREAM-FINISH] Cleared activeStreamId for session ${sessionId}`);
-
-        // End span manually after stream has finished
-        trace.getActiveSpan()?.end();
-      },
-      onError: async (error) => {
-        console.error(`[STREAM-ERROR] Stream encountered error`, {
-          sessionId,
-          error: error instanceof Error ? error.message : String(error),
-          timestamp: new Date().toISOString()
-        });
-
-        updateActiveObservation({
-          output: error,
-          level: "ERROR"
-        });
-        updateActiveTrace({
-          output: error,
-        });
-
-        // Clear the active stream when error occurs
-        await updateSessionMetadata(sessionId, { activeStreamId: null });
-        console.log(`[STREAM-ERROR] Cleared activeStreamId for session ${sessionId} after error`);
-
-        // End span manually after stream has finished
-        trace.getActiveSpan()?.end();
-      },
-    });
-
-    // Handle persistence in the background after stream completes
-    result.text.then(async (finalText) => {
-      const response = await result.response;
-      try {
-        console.log('Stream finished, saving to database...');
-
-        // Extract tool calls and results from response.messages
-        // response.messages contains the full conversation including tool activity
-        // ModelMessage uses 'input' for tool calls and 'output' for tool results
-        const toolParts: Array<{
-          type: 'tool-call';
-          toolCallId: string;
-          toolName: string;
-          args: unknown;
-        } | {
-          type: 'tool-result';
-          toolCallId: string;
-          toolName: string;
-          result: unknown;
-        }> = [];
-
-        if (response.messages) {
-          for (const message of response.messages) {
-            if (message.role === 'assistant' && 'content' in message) {
-              // Extract tool-call parts from assistant messages
-              const content = message.content;
-              if (Array.isArray(content)) {
-                for (const part of content) {
-                  if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-call') {
-                    // ModelMessage ToolCallPart has 'input' field
-                    toolParts.push({
-                      type: 'tool-call',
-                      toolCallId: part.toolCallId,
-                      toolName: part.toolName,
-                      args: part.input,
-                    });
-                  }
-                }
-              }
-            } else if (message.role === 'tool' && 'content' in message) {
-              // Extract tool-result parts from tool messages
-              const content = message.content;
-              if (Array.isArray(content)) {
-                for (const part of content) {
-                  if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-result') {
-                    // ModelMessage ToolResultPart has 'output' field
-                    toolParts.push({
-                      type: 'tool-result',
-                      toolCallId: part.toolCallId,
-                      toolName: part.toolName,
-                      result: part.output,
-                    });
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        // Build merged parts array: tool calls, tool results, then final text
-        // Note: We store tool parts in a simplified format for database persistence
-        // The UI will handle rendering these parts correctly
-        const mergedParts = [
-          ...toolParts,
-          ...(finalText ? [{ type: 'text' as const, text: finalText }] : []),
-        ];
-
-        // Convert response to UIMessage format for storage with all parts
-        // Cast to UIMessage since our storage format is simpler than the streaming format
-        const assistantMessage: UIMessage = {
-          id: response.id,
-          role: 'assistant',
-          parts: mergedParts as unknown as UIMessage['parts'],
-        };
-
-        console.log(`Assistant message has ${mergedParts.length} parts (${toolParts.length} tool parts, ${finalText ? 1 : 0} text part)`);
-
-        const finishedMessages = [...allMessages, assistantMessage];
-        await saveMessages(sessionId, finishedMessages);
-
-        if (isNew) {
-          const firstUserText = extractFirstUserMessage(finishedMessages);
-          if (firstUserText) {
-            const title = generateSessionTitle(firstUserText);
-            await updateSessionMetadata(sessionId, { title });
-          }
-        }
-
-        await updateSessionMetadata(sessionId, {
-          messageCount: finishedMessages.length,
-          lastMessageAt: new Date(),
-        });
-
-        revalidatePath('/chat');
-        revalidatePath(`/chat/${sessionId}`);
-
-        console.log(`Saved ${finishedMessages.length} messages to session ${sessionId}`);
-      } catch (error) {
-        console.error('Error saving messages to database:', error);
+    if (lastUserMessage) {
+      if ('content' in lastUserMessage && typeof lastUserMessage.content === 'string') {
+        question = lastUserMessage.content;
+      } else if (lastUserMessage.parts) {
+        question = lastUserMessage.parts
+          .filter(p => p.type === 'text')
+          .map(p => (p as { text: string }).text)
+          .join('');
       }
+    }
+
+    // Run the agent loop (this waits for completion)
+    // We update the trace active span to associate it with the session if feasible,
+    // though Langfuse 'observe' wrapper handles the span.
+    const { answer } = await performDeepSearch({
+      question,
+      userId: user.id
     });
 
+    updateActiveTrace({
+      sessionId,
+      output: answer
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. PERSIST RESULT
+    // ─────────────────────────────────────────────────────────────
+    // Persist the final answer
+    await persistAgentResult({
+      sessionId,
+      allMessages,
+      answer,
+      isNew,
+    });
+
+    revalidatePath('/chat');
+    revalidatePath(`/chat/${sessionId}`);
+
+    // Flush logs/traces
     after(async () => await langfuseSpanProcessor.forceFlush());
 
-    // Return the stream response with resumable stream support
-    return result.toUIMessageStreamResponse({
-      async consumeSseStream({ stream }) {
-        const streamId = generateId();
-        const timestamp = new Date().toISOString();
+    // ─────────────────────────────────────────────────────────────
+    // 5. RETURN FAKE STREAM RESPONSE
+    // ─────────────────────────────────────────────────────────────
+    // We return a "Data Stream Protocol" response so 'useChat' treats it as a stream.
+    // Format: 0:"<json_escaped_string>"\n
 
-        console.log(`[STREAM-CREATE] Starting stream creation`, {
-          streamId,
-          sessionId,
-          timestamp,
-          user: user.clerkId
-        });
-
-        const streamContext = await getStreamContext();
-
-        try {
-          // Create resumable stream and store in Redis
-          await streamContext.createNewResumableStream(streamId, () => stream);
-
-          // Save the stream ID to the session for resumption
-          await updateSessionMetadata(sessionId, { activeStreamId: streamId });
-
-          console.log(`[STREAM-CREATE] ✓ Successfully created resumable stream`, {
-            streamId,
-            sessionId,
-            timestamp,
-            ttl: '24 hours'
-          });
-        } catch (error) {
-          console.error(`[STREAM-CREATE] ✗ Failed to create resumable stream`, {
-            streamId,
-            sessionId,
-            timestamp,
-            error: error instanceof Error ? error.message : String(error)
-          });
-          // If stream creation fails, still return the stream but without resumability
-          throw error;
-        }
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          if (answer) {
+            // "0" denotes a text part in the Data Stream Protocol
+            const textPart = JSON.stringify(answer);
+            controller.enqueue(new TextEncoder().encode(`0:${textPart}\n`));
+          }
+          controller.close();
+        },
+      }),
+      {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'X-Vercel-AI-Data-Stream': 'v1',
+        },
       }
-    });
-  }catch (err) {
+    );
+
+  } catch (err) {
     console.error('Error in chat route:', err);
     return new Response(JSON.stringify({ error: 'Something went wrong.' }), {
       status: 500,
@@ -332,7 +132,6 @@ async function handler(req: Request) {
 }
 
 export const POST = observe(handler, {
-  name: "Chat API Handler",
-  endOnExit: false
-
-})
+  name: 'Chat API Handler',
+  endOnExit: false,
+});
