@@ -1,5 +1,5 @@
 import { google } from '@ai-sdk/google';
-import {generateText} from 'ai';
+import { generateText } from 'ai';
 
 export const model = async () => {
     const result = await generateText({

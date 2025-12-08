@@ -41,7 +41,7 @@ You MUST return a valid JSON object with a "type" field.`;
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       const result = await generateObject({
-        model: google('gemini-1.5-flash'),  // Using 1.5-flash for stability
+        model: google('gemini-2.5-flash'),
         schema: actionSchema,
         prompt,
       });
@@ -61,12 +61,12 @@ You MUST return a valid JSON object with a "type" field.`;
 
   // If all retries fail, return a sensible default based on context
   console.error(`❌ All ${MAX_RETRIES} attempts failed. Using fallback action.`);
-  
+
   // If we have no research yet, default to search
   if (ctx.getStep() <= 1) {
     return { type: "search", query: ctx.getQuestion() };
   }
-  
+
   // If we're running low on steps or have some data, answer
   return { type: "answer" };
 }

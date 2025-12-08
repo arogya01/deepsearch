@@ -17,7 +17,7 @@ export async function answerQuestion(
 
   try {
     const result = await generateText({
-      model: google("gemini-2.5-flash"), 
+      model: google("gemini-2.5-flash"),
       system: systemPrompt,
       prompt: `Question: ${ctx.getQuestion()}
 
