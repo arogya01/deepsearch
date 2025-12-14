@@ -79,11 +79,9 @@ export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
 
       case "answer": {
         console.log(`\n💡 Generating final answer...`);
-        const answer = await answerQuestion(ctx);
-        ctx.addMessage({ role: "assistant", content: answer });
-        console.log(`\n✨ Answer generated!\n`);
-        console.log(`\n✨ Answer generated!\n`);
-        return { answer, context: ctx };
+        const stream = answerQuestion(ctx);
+        console.log(`\n✨ Answer stream started!\n`);
+        return { stream, context: ctx };
       }
 
       default: {
@@ -96,7 +94,6 @@ export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
 
   // If we've exhausted all steps, generate a final answer with what we have
   console.log(`\n⚠️ Max steps reached. Generating best-effort answer...`);
-  const finalAnswer = await answerQuestion(ctx, { isFinal: true });
-  ctx.addMessage({ role: "assistant", content: finalAnswer });
-  return { answer: finalAnswer, context: ctx };
+  const stream = answerQuestion(ctx, { isFinal: true });
+  return { stream, context: ctx };
 }

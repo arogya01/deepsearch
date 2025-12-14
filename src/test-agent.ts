@@ -6,7 +6,7 @@ import "dotenv/config";  // Load .env file
 // Quick validation of required env vars before importing heavy modules
 const requiredEnvVars = [
   "GOOGLE_GENERATIVE_AI_API_KEY",
-  "SERPER_API_KEY", 
+  "SERPER_API_KEY",
   "DATABASE_URL"
 ];
 
@@ -30,11 +30,20 @@ async function main() {
   console.log(`Question: ${question}\n`);
 
   try {
-    const answer = await runAgentLoop(question);
+    // Run agent loop - now returns { stream, context }
+    const { stream } = await runAgentLoop({ question, userId: 1 });
+
+    // Consume the stream and print the answer
     console.log("\n" + "═".repeat(60));
     console.log("📝 FINAL ANSWER:");
     console.log("═".repeat(60));
-    console.log(answer);
+
+    // Stream the answer to stdout
+    for await (const chunk of stream.textStream) {
+      process.stdout.write(chunk);
+    }
+
+    console.log("\n");
     process.exit(0);
   } catch (error) {
     console.error("\n❌ Agent failed:", error);

@@ -67,60 +67,45 @@ async function handler(req: Request) {
       }
     }
 
-    // Run the agent loop (this waits for completion)
-    // We update the trace active span to associate it with the session if feasible,
-    // though Langfuse 'observe' wrapper handles the span.
-    const { answer } = await performDeepSearch({
+    // Run the agent loop - now returns a stream instead of awaiting completion
+    const { stream } = await performDeepSearch({
       question,
       userId: user.id
     });
 
-    updateActiveTrace({
-      sessionId,
-      output: answer
-    });
-
     // ─────────────────────────────────────────────────────────────
-    // 4. PERSIST RESULT
+    // 4. PERSIST RESULT (via after() since we return stream immediately)
     // ─────────────────────────────────────────────────────────────
-    // Persist the final answer
-    await persistAgentResult({
-      sessionId,
-      allMessages,
-      answer,
-      isNew,
-    });
+    // We use stream.text promise to get the final answer for persistence
+    after(async () => {
+      try {
+        const answer = await stream.text;
 
-    revalidatePath('/chat');
-    revalidatePath(`/chat/${sessionId}`);
+        updateActiveTrace({
+          sessionId,
+          output: answer
+        });
 
-    // Flush logs/traces
-    after(async () => await langfuseSpanProcessor.forceFlush());
+        await persistAgentResult({
+          sessionId,
+          allMessages,
+          answer,
+          isNew,
+        });
 
-    // ─────────────────────────────────────────────────────────────
-    // 5. RETURN FAKE STREAM RESPONSE
-    // ─────────────────────────────────────────────────────────────
-    // We return a "Data Stream Protocol" response so 'useChat' treats it as a stream.
-    // Format: 0:"<json_escaped_string>"\n
+        revalidatePath('/chat');
+        revalidatePath(`/chat/${sessionId}`);
 
-    return new Response(
-      new ReadableStream({
-        start(controller) {
-          if (answer) {
-            // "0" denotes a text part in the Data Stream Protocol
-            const textPart = JSON.stringify(answer);
-            controller.enqueue(new TextEncoder().encode(`0:${textPart}\n`));
-          }
-          controller.close();
-        },
-      }),
-      {
-        headers: {
-          'Content-Type': 'text/plain; charset=utf-8',
-          'X-Vercel-AI-Data-Stream': 'v1',
-        },
+        await langfuseSpanProcessor.forceFlush();
+      } catch (err) {
+        console.error('Error persisting agent result:', err);
       }
-    );
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. RETURN REAL STREAM RESPONSE
+    // ─────────────────────────────────────────────────────────────
+    return stream.toUIMessageStreamResponse();
 
   } catch (err) {
     console.error('Error in chat route:', err);
