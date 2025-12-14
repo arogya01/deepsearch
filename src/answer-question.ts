@@ -1,4 +1,4 @@
-import { streamText } from "ai";
+import { smoothStream, streamText } from "ai";
 import { google } from "@ai-sdk/google";
 import { SystemContext } from "./system-context";
 
@@ -28,6 +28,7 @@ export function answerQuestion(
       // Update context with the final answer after streaming completes
       ctx.addMessage({ role: "assistant", content: text });
     },
+    experimental_transform: smoothStream()
   });
 
   return result;
