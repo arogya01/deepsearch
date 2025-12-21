@@ -8,6 +8,7 @@ import { Streamdown } from "streamdown";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { ToolCallCard } from "./tool-call-card";
+import { ActionCard } from "./action-card";
 import { generateNanoId } from "@/app/utils/common";
 import { revalidateSidebar } from "@/app/actions/chat";
 
@@ -16,6 +17,16 @@ import type { UIMessage } from "ai";
 export type MessagePart = NonNullable<UIMessage["parts"]>[number];
 
 const TOOL_MESSAGE_PREFIX = "tool-";
+
+interface AgentActionData {
+  type: "agent-action";
+  action: {
+    type: string;
+    title: string;
+    description: string;
+    step: number;
+  };
+}
 
 type ToolMessagePart = MessagePart & {
   type: string;
@@ -128,10 +139,10 @@ export const ChatWindow = ({
       }),
     }),
     messages: initialMessages,
-    onFinish: async () => {   
-      if(newChat){
+    onFinish: async () => {
+      if (newChat) {
         router.push(`/chat/${sessionId}`);
-      }   
+      }
       // Revalidate sidebar to show updated chat list
       await revalidateSidebar();
       router.refresh();
@@ -221,6 +232,13 @@ export const ChatWindow = ({
                 );
 
               default:
+                if (part.type === "data-agent-action" && "data" in part) {
+                  const data = part.data as unknown as AgentActionData;
+                  if (data?.type === "agent-action" && data.action) {
+                    return <ActionCard key={idx} action={data.action} />;
+                  }
+                }
+
                 if (isToolMessagePart(part)) {
                   const toolPart = normalizeToolMessagePart(part);
                   if (toolPart.toolName === "searchWeb") {
@@ -331,7 +349,8 @@ export const ChatWindow = ({
                     {
                       icon: "🔬",
                       title: "Scientific Research",
-                      prompt: "What are the latest developments in quantum computing?",
+                      prompt:
+                        "What are the latest developments in quantum computing?",
                     },
                     {
                       icon: "💡",
@@ -356,7 +375,9 @@ export const ChatWindow = ({
                       }}
                       className="flex items-start gap-3 p-3 sm:p-4 text-left bg-card border border-border rounded-xl hover:border-primary/50 hover:bg-accent transition-all shadow-sm hover:shadow-md"
                     >
-                      <span className="text-xl sm:text-2xl">{example.icon}</span>
+                      <span className="text-xl sm:text-2xl">
+                        {example.icon}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <div className="font-semibold text-sm sm:text-base text-card-foreground mb-1">
                           {example.title}
@@ -379,7 +400,9 @@ export const ChatWindow = ({
           {messages.map((m, index) => {
             const isUser = m.role === "user";
             const messageText = getMessageText(m);
-            const timestamp = formatTimestamp((m as { createdAt?: string | number | Date }).createdAt);
+            const timestamp = formatTimestamp(
+              (m as { createdAt?: string | number | Date }).createdAt
+            );
 
             // Check if previous message is from the same sender
             const previousMessage = index > 0 ? messages[index - 1] : null;
@@ -392,11 +415,15 @@ export const ChatWindow = ({
             return (
               <div
                 key={m.id}
-                className={`flex ${isUser ? "justify-end" : "justify-start"} group ${
-                  isGrouped ? "mt-1" : "mt-4 sm:mt-6"
-                }`}
+                className={`flex ${
+                  isUser ? "justify-end" : "justify-start"
+                } group ${isGrouped ? "mt-1" : "mt-4 sm:mt-6"}`}
               >
-                <div className={`flex gap-2 sm:gap-3 max-w-[85%] sm:max-w-[80%] md:max-w-[75%] ${isUser ? "flex-row-reverse" : "flex-row"}`}>
+                <div
+                  className={`flex gap-2 sm:gap-3 max-w-[85%] sm:max-w-[80%] md:max-w-[75%] ${
+                    isUser ? "flex-row-reverse" : "flex-row"
+                  }`}
+                >
                   {/* Avatar - only show for first message in group */}
                   <div className="flex-shrink-0 mt-1">
                     {!isGrouped ? (
@@ -488,9 +515,7 @@ export const ChatWindow = ({
                       <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
                       <span className="w-2 h-2 bg-muted-foreground/80 rounded-full animate-bounce"></span>
                     </div>
-                    <span className="text-xs sm:text-sm">
-                      Thinking…
-                    </span>
+                    <span className="text-xs sm:text-sm">Thinking…</span>
                   </div>
                 </div>
               </div>
@@ -523,7 +548,8 @@ export const ChatWindow = ({
                       Something went wrong
                     </h4>
                     <p className="text-xs sm:text-sm text-red-700 dark:text-red-300">
-                      We encountered an error. Please try again or contact support if the problem persists.
+                      We encountered an error. Please try again or contact
+                      support if the problem persists.
                     </p>
                   </div>
                 </div>

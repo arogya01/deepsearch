@@ -1,20 +1,30 @@
-// essentially implementing the steps for the agent to think through with the citations
-
 import { SystemContext } from "./system-context";
 import { performWebSearch } from "./server/search/web-search";
 import { performWebScrape } from "./server/search/web-scraper";
 import { getNextAction } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
+import { UIMessageStreamWriter } from "ai";
 
+export interface AgentAction {
+  type: string;
+  title?: string;
+  description?: string;
+  step: number;
+}
 
 export interface AgentLoopOptions {
   question: string;
   userId: number;
+  writer?: UIMessageStreamWriter;
 }
-export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
+
+export async function runAgentLoop({ question, userId, writer }: AgentLoopOptions) {
   const ctx = new SystemContext();
   ctx.setQuestion(question);
   ctx.addMessage({ role: "user", content: question });
+
+  // Collect all actions for persistence
+  const collectedActions: AgentAction[] = [];
 
   console.log(`\n🔍 Starting DeepSearch for: "${question}"\n`);
 
@@ -24,6 +34,28 @@ export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
 
     // Get the next action from the LLM
     const action = await getNextAction(ctx);
+    const actionWithDetails = action as { title?: string; description?: string; type: string };
+
+    // Collect action for persistence
+    const agentAction: AgentAction = {
+      type: action.type,
+      title: actionWithDetails.title,
+      description: actionWithDetails.description,
+      step: ctx.getStep()
+    };
+    collectedActions.push(agentAction);
+
+    // Emit the action to the UI stream
+    if (writer) {
+      writer.write({
+        type: 'data-agent-action' as `data-${string}`,
+        data: {
+          type: 'agent-action',
+          action: agentAction
+        }
+      });
+    }
+
     console.log(`🤖 Decision: ${action.type}`);
 
     switch (action.type) {
@@ -81,7 +113,7 @@ export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
         console.log(`\n💡 Generating final answer...`);
         const stream = answerQuestion(ctx);
         console.log(`\n✨ Answer stream started!\n`);
-        return { stream, context: ctx };
+        return { stream, context: ctx, actions: collectedActions };
       }
 
       default: {
@@ -95,5 +127,5 @@ export async function runAgentLoop({ question, userId }: AgentLoopOptions) {
   // If we've exhausted all steps, generate a final answer with what we have
   console.log(`\n⚠️ Max steps reached. Generating best-effort answer...`);
   const stream = answerQuestion(ctx, { isFinal: true });
-  return { stream, context: ctx };
+  return { stream, context: ctx, actions: collectedActions };
 }

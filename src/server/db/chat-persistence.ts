@@ -359,21 +359,54 @@ export async function persistStreamResult({
   console.log(`Saved ${finishedMessages.length} messages to session ${sessionId}`);
 }
 
+export interface AgentActionPart {
+  type: string;
+  title?: string;
+  description?: string;
+  step: number;
+}
+
 export async function persistAgentResult({
   sessionId,
   allMessages,
   answer,
+  actions,
   isNew,
 }: {
   sessionId: string;
   allMessages: UIMessage[];
   answer: string;
+  actions?: AgentActionPart[];
   isNew?: boolean;
 }) {
+  // Build parts array: first action parts, then the text answer
+  const parts: UIMessage['parts'] = [];
+
+  // Add action parts as data parts
+  if (actions && actions.length > 0) {
+    for (const action of actions) {
+      parts.push({
+        type: 'data-agent-action' as const,
+        data: {
+          type: 'agent-action',
+          action: {
+            type: action.type,
+            title: action.title,
+            description: action.description,
+            step: action.step
+          }
+        }
+      } as unknown as UIMessage['parts'][number]);
+    }
+  }
+
+  // Add the final text part
+  parts.push({ type: 'text', text: answer });
+
   const assistantMessage: UIMessage = {
     id: generateNanoId(),
     role: 'assistant',
-    parts: [{ type: 'text', text: answer }],
+    parts,
   };
 
   const finishedMessages = [...allMessages, assistantMessage];
@@ -392,7 +425,7 @@ export async function persistAgentResult({
     lastMessageAt: new Date(),
   });
 
-  console.log(`Saved agent result to session ${sessionId}`);
+  console.log(`Saved agent result to session ${sessionId} with ${parts.length} parts`);
 }
 
 // ============================================================================
