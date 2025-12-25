@@ -1,5 +1,5 @@
 
-import { type UIMessage } from 'ai';
+import { type UIMessage, createUIMessageStream, createUIMessageStreamResponse } from 'ai';
 import { currentUser } from '@clerk/nextjs/server';
 import { ensureUserExists } from '@/server/auth/user-sync';
 import { userCache } from '@/server/redis';
@@ -9,7 +9,6 @@ import {
   getSessionWithMessages,
   persistAgentResult,
 } from '@/server/db/chat-persistence';
-import { after } from 'next/server';
 import { observe, updateActiveTrace } from '@langfuse/tracing';
 import { langfuseSpanProcessor } from '../../../instrumentation';
 import { performDeepSearch } from '@/server/search/deep-search';
@@ -67,45 +66,53 @@ async function handler(req: Request) {
       }
     }
 
-    // Run the agent loop - now returns a stream instead of awaiting completion
-    const { stream } = await performDeepSearch({
-      question,
-      userId: user.id
+    const uiMessageStream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        try {
+          // Run the agent loop - passing the writer to stream intermediate actions
+          const { stream: finalStream, actions } = await performDeepSearch({
+            question,
+            userId: user.id,
+            writer
+          });
+
+          // ─────────────────────────────────────────────────────────────
+          // 4. PERSIST RESULT
+          // ─────────────────────────────────────────────────────────────
+          const answer = await finalStream.text;
+
+          updateActiveTrace({
+            sessionId,
+            output: answer
+          });
+
+          await persistAgentResult({
+            sessionId,
+            allMessages,
+            answer,
+            actions,
+            isNew,
+          });
+
+          revalidatePath('/chat');
+          revalidatePath(`/chat/${sessionId}`);
+
+          await langfuseSpanProcessor.forceFlush();
+
+          // Merge the final output stream into our UI message stream
+          writer.merge(finalStream.toUIMessageStream({ sendStart: false }));
+        } catch (error) {
+          console.error('Error in agent loop execution:', error);
+          writer.write({
+            type: 'text-delta',
+            id: 'err-' + Date.now(),
+            delta: '\n\nAn error occurred while performing the search. Please try again.',
+          });
+        }
+      },
     });
 
-    // ─────────────────────────────────────────────────────────────
-    // 4. PERSIST RESULT (via after() since we return stream immediately)
-    // ─────────────────────────────────────────────────────────────
-    // We use stream.text promise to get the final answer for persistence
-    after(async () => {
-      try {
-        const answer = await stream.text;
-
-        updateActiveTrace({
-          sessionId,
-          output: answer
-        });
-
-        await persistAgentResult({
-          sessionId,
-          allMessages,
-          answer,
-          isNew,
-        });
-
-        revalidatePath('/chat');
-        revalidatePath(`/chat/${sessionId}`);
-
-        await langfuseSpanProcessor.forceFlush();
-      } catch (err) {
-        console.error('Error persisting agent result:', err);
-      }
-    });
-
-    // ─────────────────────────────────────────────────────────────
-    // 5. RETURN REAL STREAM RESPONSE
-    // ─────────────────────────────────────────────────────────────
-    return stream.toUIMessageStreamResponse();
+    return createUIMessageStreamResponse({ stream: uiMessageStream });
 
   } catch (err) {
     console.error('Error in chat route:', err);
