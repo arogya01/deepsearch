@@ -1,4 +1,4 @@
-import { type UIMessage } from 'ai';
+import { type AppUIMessage } from '@/lib/ui-types';
 
 // ============================================================================
 // Chat Session Types
@@ -97,6 +97,6 @@ export interface SessionWithMessages {
   messageCount: number;
   lastMessageAt: Date | null;
   createdAt: Date;
-  messages: UIMessage[];
+  messages: AppUIMessage[];
 }
 

@@ -64,9 +64,18 @@ You MUST return a valid JSON object with a "type" field.`;
 
   // If we have no research yet, default to search
   if (ctx.getStep() <= 1) {
-    return { type: "search", query: ctx.getQuestion() };
+    return {
+      type: "search",
+      query: ctx.getQuestion(),
+      title: "Initial Web Search",
+      description: `Searching the web for: "${ctx.getQuestion()}" to start the research process.`
+    };
   }
 
   // If we're running low on steps or have some data, answer
-  return { type: "answer" };
+  return {
+    type: "answer",
+    title: "Final Answer Generation",
+    description: "Synthesizing all researched information into a final response."
+  };
 }

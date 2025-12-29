@@ -7,6 +7,7 @@ import {
   type SaveMessageParams,
   type SessionWithMessages,
 } from './types';
+import { type AppUIMessage } from '@/lib/ui-types';
 
 // ============================================================================
 // Session Management
@@ -116,7 +117,7 @@ export function generateSessionTitle(firstMessage: string): string {
  */
 export async function saveMessages(
   sessionId: string,
-  uiMessages: UIMessage[]
+  uiMessages: AppUIMessage[]
 ): Promise<void> {
   for (let i = 0; i < uiMessages.length; i++) {
     const message = uiMessages[i];
@@ -135,7 +136,7 @@ export async function saveMessages(
  */
 async function upsertMessage(
   sessionId: string,
-  message: UIMessage,
+  message: AppUIMessage,
   sequence: number
 ): Promise<void> {
   const isCompleted = message.parts.some(part =>
@@ -222,7 +223,7 @@ async function upsertMessage(
  */
 export async function saveMessageParts(
   messageId: string,
-  parts: UIMessage['parts']
+  parts: AppUIMessage['parts']
 ): Promise<void> {
   // Delete existing parts for this message (in case of updates)
   await db
@@ -268,7 +269,7 @@ export async function persistStreamResult({
   isNew
 }: {
   sessionId: string;
-  allMessages: UIMessage[];
+  allMessages: AppUIMessage[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   result: StreamTextResult<any, any>;
   isNew?: boolean;
@@ -278,17 +279,7 @@ export async function persistStreamResult({
 
   console.log('Stream Finished, saving to database');
 
-  const toolParts: Array<{
-    type: 'tool-call';
-    toolCallId: string;
-    toolName: string;
-    args: unknown;
-  } | {
-    type: 'tool-result';
-    toolCallId: string;
-    toolName: string;
-    result: unknown;
-  }> = [];
+  const toolParts: AppUIMessage['parts'] = [];
 
   if (response.messages) {
     for (const message of response.messages) {
@@ -298,11 +289,11 @@ export async function persistStreamResult({
           for (const part of content) {
             if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-call') {
               toolParts.push({
-                type: 'tool-call',
+                type: `tool-${part.toolName}` as `tool-${string}`,
                 toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                args: part.input,
-              });
+                state: 'output-available',
+                input: part.input,
+              } as AppUIMessage['parts'][number]);
             }
           }
         }
@@ -312,11 +303,11 @@ export async function persistStreamResult({
           for (const part of content) {
             if (typeof part === 'object' && part !== null && 'type' in part && part.type === 'tool-result') {
               toolParts.push({
-                type: 'tool-result',
+                type: `tool-${part.toolName}` as `tool-${string}`,
                 toolCallId: part.toolCallId,
-                toolName: part.toolName,
-                result: part.output,
-              });
+                state: 'output-available',
+                output: part.output,
+              } as AppUIMessage['parts'][number]);
             }
           }
         }
@@ -330,10 +321,10 @@ export async function persistStreamResult({
   ];
 
 
-  const assistantMessage: UIMessage = {
+  const assistantMessage: AppUIMessage = {
     id: response.id,
     role: 'assistant',
-    parts: mergedParts
+    parts: mergedParts as AppUIMessage['parts']
   }
 
   console.log(`Assitant message has ${mergedParts.length} parts 
@@ -374,7 +365,7 @@ export async function persistAgentResult({
   isNew,
 }: {
   sessionId: string;
-  allMessages: UIMessage[];
+  allMessages: AppUIMessage[];
   answer: string;
   actions?: AgentActionPart[];
   isNew?: boolean;
@@ -386,7 +377,7 @@ export async function persistAgentResult({
   if (actions && actions.length > 0) {
     for (const action of actions) {
       parts.push({
-        type: 'data-agent-action' as const,
+        type: 'data-agent-action',
         data: {
           type: 'agent-action',
           action: {
@@ -396,17 +387,17 @@ export async function persistAgentResult({
             step: action.step
           }
         }
-      } as unknown as UIMessage['parts'][number]);
+      } as unknown as AppUIMessage['parts'][number]);
     }
   }
 
   // Add the final text part
   parts.push({ type: 'text', text: answer });
 
-  const assistantMessage: UIMessage = {
+  const assistantMessage: AppUIMessage = {
     id: generateNanoId(),
     role: 'assistant',
-    parts,
+    parts: parts as AppUIMessage['parts'],
   };
 
   const finishedMessages = [...allMessages, assistantMessage];
@@ -454,7 +445,7 @@ export async function getSessionWithMessages(
   });
 
   // Reconstruct UIMessages by fetching parts for each message
-  const uiMessages: UIMessage[] = [];
+  const uiMessages: AppUIMessage[] = [];
 
   for (const msg of sessionMessages) {
     const parts = await db.query.messageParts.findMany({
@@ -463,10 +454,10 @@ export async function getSessionWithMessages(
     });
 
     // Reconstruct UIMessage
-    const uiMessage: UIMessage = {
+    const uiMessage: AppUIMessage = {
       id: msg.id,
       role: msg.role as 'user' | 'assistant' | 'system',
-      parts: parts.map(p => p.payload) as UIMessage['parts'],
+      parts: parts.map(p => p.payload) as AppUIMessage['parts'],
     };
 
     uiMessages.push(uiMessage);
@@ -533,7 +524,7 @@ function generateNanoId(size: number = 21): string {
 /**
  * Extracts the first user message text for title generation
  */
-export function extractFirstUserMessage(uiMessages: UIMessage[]): string | null {
+export function extractFirstUserMessage(uiMessages: AppUIMessage[]): string | null {
   const firstUserMessage = uiMessages.find(msg => msg.role === 'user');
 
   if (!firstUserMessage) {

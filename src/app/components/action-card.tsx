@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 interface ActionCardProps {
   action: {
     type: string;
-    title: string;
-    description: string;
+    title?: string;
+    description?: string;
     step: number;
   };
 }

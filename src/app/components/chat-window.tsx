@@ -12,9 +12,9 @@ import { ActionCard } from "./action-card";
 import { generateNanoId } from "@/app/utils/common";
 import { revalidateSidebar } from "@/app/actions/chat";
 
-import type { UIMessage } from "ai";
+import { type AppUIMessage, type AppUIDataTypes } from "@/lib/ui-types";
 
-export type MessagePart = NonNullable<UIMessage["parts"]>[number];
+export type MessagePart = NonNullable<AppUIMessage["parts"]>[number];
 
 const TOOL_MESSAGE_PREFIX = "tool-";
 
@@ -28,17 +28,6 @@ interface AgentActionData {
   };
 }
 
-type ToolMessagePart = MessagePart & {
-  type: string;
-  toolCallId?: string;
-  toolName?: string;
-  args?: unknown;
-  result?: unknown;
-  input?: unknown;
-  output?: unknown;
-  state?: string;
-};
-
 type NormalizedToolMessagePart = {
   type: string;
   toolCallId: string;
@@ -50,26 +39,29 @@ type NormalizedToolMessagePart = {
   state?: string;
 };
 
-const isToolMessagePart = (part: MessagePart): part is ToolMessagePart => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isToolMessagePart = (part: MessagePart): part is any => {
   if (!part || typeof part !== "object") {
     return false;
   }
 
-  if (!("type" in part) || typeof part.type !== "string") {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  if (!("type" in part) || typeof (part as any).type !== "string") {
     return false;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const type = (part as any).type as string;
   // Handle both streaming format (tool-${toolName}) and stored format (tool-call, tool-result)
   return (
-    part.type.startsWith(TOOL_MESSAGE_PREFIX) ||
-    part.type === "tool-call" ||
-    part.type === "tool-result"
+    type.startsWith(TOOL_MESSAGE_PREFIX) ||
+    type === "tool-call" ||
+    type === "tool-result"
   );
 };
 
-const normalizeToolMessagePart = (
-  part: ToolMessagePart
-): NormalizedToolMessagePart => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const normalizeToolMessagePart = (part: any): NormalizedToolMessagePart => {
   const type = typeof part.type === "string" ? part.type : "";
 
   // Extract tool name from different formats
@@ -98,9 +90,12 @@ const normalizeToolMessagePart = (
     toolName,
     args: "args" in part ? part.args : undefined,
     result: "result" in part ? part.result : undefined,
-    input: "input" in part ? part.input : undefined,
-    output: "output" in part ? part.output : undefined,
-    state: "state" in part ? part.state : undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    input: "input" in part ? (part as any).input : undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    output: "output" in part ? (part as any).output : undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    state: "state" in part ? (part as any).state : undefined,
   };
 };
 
@@ -111,7 +106,7 @@ export const ChatWindow = ({
 }: {
   chatId?: string;
   newChat?: boolean;
-  initialMessages?: UIMessage[];
+  initialMessages?: AppUIMessage[];
 }) => {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -183,7 +178,7 @@ export const ChatWindow = ({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isSubmitted, isStreaming, stop]);
 
-  const getMessageText = (m: UIMessage): string => {
+  const getMessageText = (m: AppUIMessage): string => {
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       return m.parts
         .filter((part) => part?.type === "text")
@@ -216,14 +211,14 @@ export const ChatWindow = ({
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  const renderMessageContent = (m: UIMessage) => {
+  const renderMessageContent = (m: AppUIMessage) => {
     if (Array.isArray(m.parts) && m.parts.length > 0) {
       return (
         <div className="whitespace-pre-wrap break-words">
           {m.parts.map((part, idx: number) => {
             if (!part) return null;
 
-            switch (part.type) {
+            switch (part.type as string) {
               case "text":
                 return (
                   <Streamdown key={idx}>
@@ -233,8 +228,8 @@ export const ChatWindow = ({
 
               default:
                 if (part.type === "data-agent-action" && "data" in part) {
-                  const data = part.data as unknown as AgentActionData;
-                  if (data?.type === "agent-action" && data.action) {
+                  const data = part.data as AppUIDataTypes["agent-action"];
+                  if (data && data.action) {
                     return <ActionCard key={idx} action={data.action} />;
                   }
                 }
@@ -397,7 +392,7 @@ export const ChatWindow = ({
             </div>
           )}
 
-          {messages.map((m, index) => {
+          {(messages as AppUIMessage[]).map((m, index) => {
             const isUser = m.role === "user";
             const messageText = getMessageText(m);
             const timestamp = formatTimestamp(
