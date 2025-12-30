@@ -39,30 +39,25 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              className="inline-block mb-4"
-            >
-              <h3 className="text-2xl font-bold gradient-text">DeepSearch</h3>
-            </motion.div>
-            <p className="text-white/60 mb-6 max-w-sm">
+            <div className="inline-block mb-4">
+              <h3 className="text-2xl font-bold text-amber">DeepSearch</h3>
+            </div>
+            <p className="text-white/60 mb-6 max-w-sm font-mono">
               Empowering knowledge discovery through advanced AI-powered search.
               Explore deeper, discover more.
             </p>
             <div className="flex gap-4">
               {socialLinks.map((social, index) => (
-                <motion.a
+                <a
                   key={index}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ scale: 1.2, rotate: 5 }}
-                  whileTap={{ scale: 0.9 }}
-                  className="w-10 h-10 rounded-lg glassmorphism border-white/10 hover:border-purple-500/50 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                  className="w-10 h-10 rounded-lg bg-[#1A1A1A] border border-white/10 hover:border-amber/50 flex items-center justify-center text-white/70 hover:text-white transition-colors"
                   aria-label={social.label}
                 >
                   <social.icon className="w-5 h-5" />
-                </motion.a>
+                </a>
               ))}
             </div>
           </div>
@@ -70,23 +65,19 @@ export function Footer() {
           {/* Links */}
           {Object.entries(footerLinks).map(([category, links]) => (
             <div key={category}>
-              <h4 className="text-white font-semibold mb-4 capitalize">
+              <h4 className="text-white font-semibold mb-4 capitalize font-display">
                 {category}
               </h4>
               <ul className="space-y-3">
                 {links.map((link, linkIndex) => (
-                  <motion.li
-                    key={linkIndex}
-                    whileHover={{ x: 5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
+                  <li key={linkIndex}>
                     <Link
                       href={link.href}
-                      className="text-white/60 hover:text-white transition-colors"
+                      className="text-white/60 hover:text-amber transition-colors font-mono text-sm"
                     >
                       {link.name}
                     </Link>
-                  </motion.li>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -96,15 +87,15 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-white/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/50 text-sm">
+            <p className="text-white/50 text-sm font-mono">
               © {new Date().getFullYear()} DeepSearch. All rights reserved.
             </p>
-            <div className="flex items-center gap-2 text-white/50 text-sm">
+            <div className="flex items-center gap-2 text-white/50 text-sm font-mono">
               <span>Made with</span>
               <motion.span
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
-                className="text-red-500"
+                className="text-amber"
               >
                 ♥
               </motion.span>

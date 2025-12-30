@@ -20,7 +20,7 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
-  
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -28,25 +28,25 @@
 
 @layer base {
   :root {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --card: 224 71% 4%;
+    --background: 8 0% 4%;
+    --foreground: 230 10% 90%;
+    --card: 220 10% 10%;
     --card-foreground: 213 31% 91%;
     --popover: 224 71% 4%;
     --popover-foreground: 213 31% 91%;
-    --primary: 263 70% 50%;
+    --primary: 25 70% 65%;
     --primary-foreground: 210 40% 98%;
     --secondary: 215 25% 27%;
     --secondary-foreground: 210 40% 98%;
     --muted: 215 25% 27%;
     --muted-foreground: 217 10% 64%;
-    --accent: 215 25% 27%;
+    --accent: 25 70% 65%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-    --border: 215 25% 27%;
+    --border: 220 5% 20%;
     --input: 215 25% 27%;
-    --ring: 263 70% 50%;
+    --ring: 25 70% 65%;
     --radius: 0.5rem;
   }
 }
@@ -55,28 +55,57 @@
   .text-balance {
     text-wrap: balance;
   }
-  
-  .glassmorphism {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+
+  .font-display {
+    font-family: var(--font-cormorant);
+    letter-spacing: -0.02em;
   }
-  
-  .gradient-text {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+
+  .font-mono {
+    font-family: var(--font-jetbrains);
   }
-  
-  .glow {
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+
+  .border-brutal {
+    border: 2px solid #F4A460;
+  }
+
+  .border-brutal-top {
+    border-top: 2px solid #F4A460;
+  }
+
+  .bg-amber {
+    background-color: #F4A460;
+  }
+
+  .bg-amber-muted {
+    background-color: rgba(244, 164, 96, 0.1);
+  }
+
+  .text-amber {
+    color: #F4A460;
+  }
+
+  .grain-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+  }
+
+  .scanlines {
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(244, 164, 96, 0.02) 2px,
+      rgba(244, 164, 96, 0.02) 4px
+    );
   }
 }
 
 body {
-  background: linear-gradient(to bottom, #0f172a, #1e1b4b);
+  background: #080808;
   color: hsl(var(--foreground));
   min-height: 100vh;
 }

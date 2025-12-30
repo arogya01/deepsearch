@@ -3,166 +3,151 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import Link from "next/link";
-import { FloatingOrbs, GridPattern, ParticleField } from "./background-effects";
-import { SearchSimulation } from "./search-simulation";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { GrainOverlay, Scanlines, SubtleGradient } from "./background-effects";
 
 export function HeroSection() {
   const shouldReduceMotion = useReducedMotion();
-  const baseEase: [number, number, number, number] = [0.6, 0.05, 0.01, 0.9];
-
-  const fadeUp = (delay = 0) => ({
-    initial: { opacity: 0, y: shouldReduceMotion ? 0 : 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { delay, duration: shouldReduceMotion ? 0.4 : 0.8, ease: baseEase },
-  });
-
-  const fadeScale = (delay = 0) => ({
-    initial: { opacity: 0, scale: shouldReduceMotion ? 1 : 0.8 },
-    animate: { opacity: 1, scale: 1 },
-    transition: { delay, duration: shouldReduceMotion ? 0.4 : 0.6, ease: baseEase },
-  });
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Effects */}
-      <FloatingOrbs />
-      <GridPattern />
-      <ParticleField />
+      <GrainOverlay />
+      <Scanlines />
+      <SubtleGradient />
 
-      {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
-        <div className="text-center space-y-8">
-          {/* Badge */}
+        <div className="space-y-8">
           <motion.div
-            {...fadeScale(0)}
-            className="inline-flex items-center gap-2 glassmorphism px-4 py-2 rounded-full border-white/20"
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0, duration: shouldReduceMotion ? 0.4 : 0.6 }}
+            className="inline-flex items-center gap-2 border border-amber/30 px-4 py-2"
           >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <span className="text-sm text-white/90 font-medium">
-              Powered by Advanced AI
+            <div className="w-2 h-2 bg-amber rounded-full" />
+            <span className="text-sm text-white/80 font-mono">
+              RESEARCH-READY AI
             </span>
           </motion.div>
 
-          {/* Main Headline with Staggered Animation */}
-          <div className="space-y-2">
-            <motion.h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white"
-              {...fadeUp(0)}
-            >
-              Search Deeper,
-            </motion.h1>
-            <motion.h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold"
-              {...fadeUp(0.1)}
-            >
-              <span className="gradient-text">Discover More</span>
-            </motion.h1>
-          </div>
-
-          {/* Subtitle */}
-          <motion.p
-            {...fadeUp(0.2)}
-            className="text-xl sm:text-2xl text-white/70 max-w-3xl mx-auto leading-relaxed"
+          <motion.div
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1, duration: shouldReduceMotion ? 0.4 : 0.6 }}
+            className="space-y-2"
           >
-            Harness the power of AI to explore the web like never before. Get
-            comprehensive, accurate answers to your most complex questions.
+            <h1 className="text-6xl sm:text-7xl lg:text-8xl font-display font-bold text-white">
+              Search Deeper.
+            </h1>
+            <h1 className="text-6xl sm:text-7xl lg:text-8xl font-display font-bold text-amber">
+              Discover More.
+            </h1>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: shouldReduceMotion ? 0.4 : 0.6 }}
+            className="text-xl text-white/60 font-mono max-w-2xl"
+          >
+            Transform scattered information into synthesized knowledge. DeepSearch reads, analyzes, and connects insights across entire web.
           </motion.p>
 
-          {/* CTA Buttons */}
+          <div className="mt-16 relative">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-mono">
+                <div className="text-amber text-xs mb-2">SOURCE 01</div>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  &quot;Quantum error correction has reached a threshold enabling stable qubits...&quot;
+                </p>
+                <div className="mt-3 text-amber/60 text-xs">Nature, 2024</div>
+              </div>
+
+              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-mono">
+                <div className="text-amber text-xs mb-2">SOURCE 02</div>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  &quot;New qubit architecture demonstrates 99.9% coherence retention...&quot;
+                </p>
+                <div className="mt-3 text-amber/60 text-xs">MIT Tech, 2024</div>
+              </div>
+
+              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-mono">
+                <div className="text-amber text-xs mb-2">SOURCE 03</div>
+                <p className="text-white/80 text-sm leading-relaxed">
+                  &quot;Commercial quantum computing timeline accelerated to 2026...&quot;
+                </p>
+                <div className="mt-3 text-amber/60 text-xs">Science Daily, 2024</div>
+              </div>
+            </div>
+
+            <div className="hidden md:flex justify-center gap-32 mb-4">
+              <motion.div
+                animate={shouldReduceMotion ? undefined : { opacity: [0.4, 1, 0.4] }}
+                transition={shouldReduceMotion ? undefined : { duration: 3, repeat: Infinity }}
+                className="w-32 h-px bg-amber/60"
+              />
+              <motion.div
+                animate={shouldReduceMotion ? undefined : { opacity: [0.4, 1, 0.4] }}
+                transition={shouldReduceMotion ? undefined : { duration: 3, repeat: Infinity, delay: 0.5 }}
+                className="w-32 h-px bg-amber/60"
+              />
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: shouldReduceMotion ? 0.4 : 0.6 }}
+              className="bg-amber p-8 border-2 border-amber"
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-black text-amber flex items-center justify-center font-mono text-sm font-bold">
+                  AI
+                </div>
+                <span className="font-mono text-black/60 text-sm">SYNTHESIS</span>
+              </div>
+              <p className="font-display text-2xl md:text-3xl font-bold text-black leading-relaxed">
+                Combined analysis reveals quantum error correction has achieved critical threshold for practical applications, positioning commercial viability within 2-3 years based on convergence of qubit stability and architectural advances.
+              </p>
+            </motion.div>
+
+            <div className="md:hidden flex justify-center mb-4 mt-6">
+              <motion.div
+                animate={shouldReduceMotion ? undefined : { opacity: [0.4, 1, 0.4], y: [0, 5, 0] }}
+                transition={shouldReduceMotion ? undefined : { duration: 3, repeat: Infinity }}
+                className="w-px h-8 bg-amber/60"
+              />
+            </div>
+          </div>
+
           <motion.div
-            {...fadeUp(0.3)}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4"
+            initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: shouldReduceMotion ? 0.4 : 0.6 }}
+            className="mt-12 flex flex-wrap gap-4"
           >
             <SignedOut>
               <SignInButton mode="modal">
-                <motion.button
-                  whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(139, 92, 246, 0.5)" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-purple-500/50 transition-all duration-300 flex items-center gap-2"
-                >
-                  Get Started Free
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </motion.button>
+                <button className="px-8 py-4 bg-amber text-black font-mono font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors">
+                  START RESEARCHING →
+                </button>
               </SignInButton>
             </SignedOut>
 
             <SignedIn>
               <Link href="/chat">
-                <motion.button
-                  whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(139, 92, 246, 0.5)" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="group px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold text-lg shadow-lg hover:shadow-purple-500/50 transition-all duration-300 flex items-center gap-2"
-                >
-                  Open DeepSearch
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                </motion.button>
+                <button className="px-8 py-4 bg-amber text-black font-mono font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors">
+                  START RESEARCHING →
+                </button>
               </Link>
             </SignedIn>
 
-            <motion.a
+            <a
               href="#features"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 glassmorphism text-white rounded-xl font-semibold text-lg border-white/20 hover:border-white/40 transition-all duration-300"
+              className="px-8 py-4 bg-transparent text-white font-mono font-semibold border-2 border-white/20 hover:border-amber hover:text-amber transition-colors"
             >
-              Learn More
-            </motion.a>
-          </motion.div>
-
-          {/* Search Simulation Demo */}
-          <motion.div {...fadeUp(shouldReduceMotion ? 0.4 : 1)} className="pt-16">
-            <SearchSimulation />
-          </motion.div>
-
-          {/* Stats or Social Proof */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: shouldReduceMotion ? 0.6 : 1.5, duration: 0.8 }}
-            className="pt-16 flex flex-wrap justify-center gap-12"
-          >
-            {[
-              { value: "10K+", label: "Searches Performed" },
-              { value: "95%", label: "Accuracy Rate" },
-              { value: "<2s", label: "Average Response" },
-            ].map((stat, index) => (
-              <motion.div
-                key={index}
-                whileHover={{ scale: 1.1 }}
-                className="text-center"
-              >
-                <div className="text-3xl sm:text-4xl font-bold gradient-text">
-                  {stat.value}
-                </div>
-                <div className="text-white/60 text-sm mt-1">{stat.label}</div>
-              </motion.div>
-            ))}
+              VIEW DEMO
+            </a>
           </motion.div>
         </div>
       </div>
-
-      {/* Scroll Indicator */}
-      {!shouldReduceMotion && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2, duration: 1 }}
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-        >
-          <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="w-6 h-10 border-2 border-white/30 rounded-full flex items-start justify-center p-2"
-          >
-            <motion.div
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="w-1.5 h-1.5 bg-white/70 rounded-full"
-            />
-          </motion.div>
-        </motion.div>
-      )}
     </section>
   );
 }

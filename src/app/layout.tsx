@@ -1,12 +1,18 @@
 import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Inter } from "next/font/google";
+import { Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
 import { ConditionalHeader } from "@/components/conditional-header";
 import "./globals.css";
 
-const inter = Inter({
+const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-cormorant",
+  weight: ["400", "600", "700"],
+});
+
+const jetbrains = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +32,7 @@ export default function RootLayout({
     >
       <html lang="en">
         <body
-          className={`${inter.variable} antialiased font-sans`}
+          className={`${cormorant.variable} ${jetbrains.variable} antialiased font-sans`}
         >
           <ConditionalHeader>{children}</ConditionalHeader>
         </body>

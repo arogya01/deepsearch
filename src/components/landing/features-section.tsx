@@ -2,74 +2,49 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
-import { Zap, Shield, Sparkles, Globe, Brain, TrendingUp } from "lucide-react";
 
 const features = [
   {
-    icon: Zap,
-    title: "Lightning Fast",
-    description:
-      "Get comprehensive search results in seconds with our optimized AI-powered engine.",
-    gradient: "from-yellow-400 to-orange-500",
+    number: "01",
+    title: "Deep Source Analysis",
+    description: "AI reads and understands context across academic papers, news sources, and technical documentation simultaneously.",
   },
   {
-    icon: Brain,
-    title: "AI-Powered Insights",
-    description:
-      "Advanced language models analyze and synthesize information from multiple sources.",
-    gradient: "from-purple-400 to-pink-500",
+    number: "02",
+    title: "Synthesized Insights",
+    description: "Multiple perspectives are analyzed and synthesized into coherent narratives with clear attribution.",
   },
   {
-    icon: Globe,
-    title: "Web-Scale Search",
-    description:
-      "Access and analyze information from across the entire web in real-time.",
-    gradient: "from-blue-400 to-cyan-500",
+    number: "03",
+    title: "Real-Time Updates",
+    description: "Monitor live sources and receive alerts when new relevant information becomes available.",
   },
   {
-    icon: Shield,
-    title: "Privacy First",
-    description:
-      "Your searches are private and secure. We don't track or store your queries.",
-    gradient: "from-green-400 to-emerald-500",
+    number: "04",
+    title: "Contextual Relevance",
+    description: "Every result is ranked and organized based on your specific research context and goals.",
   },
   {
-    icon: Sparkles,
-    title: "Smart Summarization",
-    description:
-      "Receive concise, relevant summaries of complex topics tailored to your needs.",
-    gradient: "from-indigo-400 to-purple-500",
+    number: "05",
+    title: "Source Verification",
+    description: "Automated citation tracking ensures every insight is properly attributed to its original source.",
   },
   {
-    icon: TrendingUp,
-    title: "Continuous Learning",
-    description:
-      "Our system improves with every search, delivering increasingly accurate results.",
-    gradient: "from-red-400 to-pink-500",
+    number: "06",
+    title: "Collaborative Research",
+    description: "Share research projects with teams and build collective knowledge repositories.",
   },
 ];
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
 export function FeatureCard({
-  icon: Icon,
+  number,
   title,
   description,
-  gradient,
   index,
 }: {
-  icon: React.ElementType;
+  number: string;
   title: string;
   description: string;
-  gradient: string;
   index: number;
 }) {
   const ref = useRef(null);
@@ -80,39 +55,16 @@ export function FeatureCard({
       ref={ref}
       initial={{ opacity: 0, y: 50 }}
       animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 50 }}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      whileHover={{ scale: 1.05, y: -5 }}
-      className="group relative"
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      className="break-inside-avoid bg-[#1A1A1A] border-brutal-top p-8"
     >
-      <div className="glassmorphism rounded-2xl p-6 h-full border-white/10 hover:border-white/30 transition-all duration-300 relative overflow-hidden">
-        {/* Gradient overlay on hover */}
-        <motion.div
-          className={`absolute inset-0 bg-gradient-to-br ${gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
-          initial={false}
-        />
-
-        {/* Icon with gradient background */}
-        <motion.div
-          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} p-2.5 mb-4 relative z-10`}
-          whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-          transition={{ duration: 0.5 }}
-        >
-          <Icon className="w-full h-full text-white" />
-        </motion.div>
-
-        <h3 className="text-xl font-bold text-white mb-3 relative z-10">
-          {title}
-        </h3>
-        <p className="text-white/70 text-sm leading-relaxed relative z-10">
-          {description}
-        </p>
-
-        {/* Glow effect */}
-        <motion.div
-          className={`absolute -bottom-px left-0 right-0 h-px bg-gradient-to-r ${gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
-          layoutId={`glow-${index}`}
-        />
-      </div>
+      <div className="font-display text-6xl font-bold text-amber/20 mb-4">{number}</div>
+      <h3 className="font-display text-2xl font-bold text-white mb-3">
+        {title}
+      </h3>
+      <p className="font-mono text-white/70 text-sm leading-relaxed">
+        {description}
+      </p>
     </motion.div>
   );
 }
@@ -131,24 +83,28 @@ export function FeaturesSection() {
           className="text-center mb-16"
         >
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Powerful Features for{" "}
-            <span className="gradient-text">Deep Research</span>
+            Powerful Features for <span className="text-amber">Deep Research</span>
           </h2>
-          <p className="text-white/70 text-lg max-w-2xl mx-auto">
-            Everything you need to dive deep into any topic and extract
-            meaningful insights
+          <p className="text-white/70 text-lg max-w-2xl mx-auto font-mono">
+            Everything you need to dive deep into any topic and extract meaningful insights
           </p>
         </motion.div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          animate={isInView ? "show" : "hidden"}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-        >
+        <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
           {features.map((feature, index) => (
             <FeatureCard key={index} {...feature} index={index} />
           ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          className="my-16 pl-4 border-l-4 border-amber"
+        >
+          <p className="font-display text-3xl italic text-white/90">
+            &quot;The future of research is not in finding more information, but in finding the right connections.&quot;
+          </p>
         </motion.div>
       </div>
     </section>
