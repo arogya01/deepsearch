@@ -14,10 +14,8 @@ interface ActionCardProps {
 export const ActionCard = ({ action }: ActionCardProps) => {
   const getIcon = (type: string) => {
     switch (type) {
-      case "search":
-        return "🔍";
-      case "scrape":
-        return "📄";
+      case "research":
+        return "🔬";
       case "answer":
         return "💡";
       default:

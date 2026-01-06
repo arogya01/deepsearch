@@ -1,22 +1,33 @@
 import { LangfuseSpanProcessor, ShouldExportSpan } from "@langfuse/otel";
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node";
-import { setLangfuseTracerProvider } from "@langfuse/tracing";
 
-// Optional: filter out NextJS infra spans
+// Filter out unwanted spans:
+// - NextJS infra spans
+// - Unnamed/empty spans (the HTTP request wrapper)
 const shouldExportSpan: ShouldExportSpan = (span) => {
-  return span.otelSpan.instrumentationScope.name !== "next.js";
+  const instrumentationName = span.otelSpan.instrumentationScope.name;
+  const spanName = span.otelSpan.name;
+
+  // Filter out Next.js infrastructure spans
+  if (instrumentationName === "next.js") {
+    return false;
+  }
+
+  // Filter out unnamed/empty spans (these are auto-created by OTel for HTTP requests)
+  if (!spanName || spanName === "Unnamed trace" || spanName.trim() === "") {
+    return false;
+  }
+
+  return true;
 };
 
 export const langfuseSpanProcessor = new LangfuseSpanProcessor({
   shouldExportSpan,
 });
 
-// Create an ISOLATED TracerProvider for Langfuse
-// Do NOT use .register() as that would set it as the global provider
-// which captures unnamed HTTP request spans
-const langfuseTracerProvider = new NodeTracerProvider({
+const tracerProvider = new NodeTracerProvider({
   spanProcessors: [langfuseSpanProcessor],
 });
 
-// Register the isolated TracerProvider with Langfuse only
-setLangfuseTracerProvider(langfuseTracerProvider);
+// Register globally - this maintains context propagation across async boundaries
+tracerProvider.register();

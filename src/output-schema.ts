@@ -1,21 +1,16 @@
 import { z } from "zod";
 
-
-export interface SearchResult {
-    type: "search";
-    query: string[];
-}
-
-export interface ScrapeAction {
-    type: "scrape";
-    urls: string[];
+export interface ResearchAction {
+    type: "research";
+    query: string;
+    urlsToScrape: string[];
 }
 
 export interface AnswerAction {
     type: "answer";
 }
 
-export type Action = SearchResult | ScrapeAction | AnswerAction;
+export type Action = ResearchAction | AnswerAction;
 
 
 const baseActionFields = {
@@ -25,17 +20,13 @@ const baseActionFields = {
 
 export const actionSchema = z.discriminatedUnion("type", [
     z.object({
-        type: z.literal("search"),
+        type: z.literal("research"),
         ...baseActionFields,
-        query: z.string().describe("The search query to find information on the web")
-    }),
-    z.object({
-        type: z.literal("scrape"),
-        ...baseActionFields,
-        urls: z.array(z.string()).min(1).describe("List of URLs to scrape for detailed content")
+        query: z.string().describe("The research query to find information on the web"),
+        urlsToScrape: z.array(z.string()).optional().describe("List of URLs to scrape for detailed content")
     }),
     z.object({
         type: z.literal("answer"),
         ...baseActionFields,
     }),
-]).describe("The next action to take: 'search' for web search, 'scrape' to extract page content, or 'answer' when ready to respond")
+])

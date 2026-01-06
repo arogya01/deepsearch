@@ -27,9 +27,9 @@ ${ctx.getContextSummary()}
 STEPS TAKEN: ${ctx.getStep()}/10
 
 DECIDE YOUR NEXT ACTION:
-1. Return {"type": "search", "query": "your search query"} if you need MORE information from the web
-2. Return {"type": "scrape", "urls": ["url1", "url2"]} if you found URLs in search results worth reading in detail  
-3. Return {"type": "answer"} if you have ENOUGH information to answer the question comprehensively
+1. Return {"type": "research", "query": "your search query"} to search the web
+2. Optionally include "urlsToScrape": ["url1", "url2"] to also fetch detailed content from specific URLs
+3. Return {"type": "answer"} if you have ENOUGH information to answer comprehensively
 
 Rules:
 - On step 1, you almost always need to search first
@@ -71,7 +71,7 @@ You MUST return a valid JSON object with a "type" field.`;
     // If we have no research yet, default to search
     if (ctx.getStep() <= 1) {
       return {
-        type: "search",
+        type: "research",
         query: ctx.getQuestion(),
         title: "Initial Web Search",
         description: `Searching the web for: "${ctx.getQuestion()}" to start the research process.`
