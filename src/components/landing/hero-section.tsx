@@ -23,7 +23,7 @@ export function HeroSection() {
             className="inline-flex items-center gap-2 border border-amber/30 px-4 py-2"
           >
             <div className="w-2 h-2 bg-amber rounded-full" />
-            <span className="text-sm text-white/80 font-mono">
+            <span className="text-sm text-white/80 font-body">
               RESEARCH-READY AI
             </span>
           </motion.div>
@@ -46,14 +46,14 @@ export function HeroSection() {
             initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: shouldReduceMotion ? 0.4 : 0.6 }}
-            className="text-xl text-white/60 font-mono max-w-2xl"
+            className="text-xl text-white/60 font-body max-w-2xl"
           >
             Transform scattered information into synthesized knowledge. DeepSearch reads, analyzes, and connects insights across entire web.
           </motion.p>
 
           <div className="mt-16 relative">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-mono">
+              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-body">
                 <div className="text-amber text-xs mb-2">SOURCE 01</div>
                 <p className="text-white/80 text-sm leading-relaxed">
                   &quot;Quantum error correction has reached a threshold enabling stable qubits...&quot;
@@ -61,7 +61,7 @@ export function HeroSection() {
                 <div className="mt-3 text-amber/60 text-xs">Nature, 2024</div>
               </div>
 
-              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-mono">
+              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-body">
                 <div className="text-amber text-xs mb-2">SOURCE 02</div>
                 <p className="text-white/80 text-sm leading-relaxed">
                   &quot;New qubit architecture demonstrates 99.9% coherence retention...&quot;
@@ -69,7 +69,7 @@ export function HeroSection() {
                 <div className="mt-3 text-amber/60 text-xs">MIT Tech, 2024</div>
               </div>
 
-              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-mono">
+              <div className="bg-[#1A1A1A] p-6 border-brutal-top font-body">
                 <div className="text-amber text-xs mb-2">SOURCE 03</div>
                 <p className="text-white/80 text-sm leading-relaxed">
                   &quot;Commercial quantum computing timeline accelerated to 2026...&quot;
@@ -98,10 +98,10 @@ export function HeroSection() {
               className="bg-amber p-8 border-2 border-amber"
             >
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-black text-amber flex items-center justify-center font-mono text-sm font-bold">
+                <div className="w-8 h-8 bg-black text-amber flex items-center justify-center font-body text-sm font-bold">
                   AI
                 </div>
-                <span className="font-mono text-black/60 text-sm">SYNTHESIS</span>
+                <span className="font-body text-black/60 text-sm">SYNTHESIS</span>
               </div>
               <p className="font-display text-2xl md:text-3xl font-bold text-black leading-relaxed">
                 Combined analysis reveals quantum error correction has achieved critical threshold for practical applications, positioning commercial viability within 2-3 years based on convergence of qubit stability and architectural advances.
@@ -125,7 +125,7 @@ export function HeroSection() {
           >
             <SignedOut>
               <SignInButton mode="modal">
-                <button className="px-8 py-4 bg-amber text-black font-mono font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors">
+                <button className="px-8 py-4 bg-amber text-black font-body font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors">
                   START RESEARCHING →
                 </button>
               </SignInButton>
@@ -133,7 +133,7 @@ export function HeroSection() {
 
             <SignedIn>
               <Link href="/chat">
-                <button className="px-8 py-4 bg-amber text-black font-mono font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors">
+                <button className="px-8 py-4 bg-amber text-black font-body font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors">
                   START RESEARCHING →
                 </button>
               </Link>
@@ -141,7 +141,7 @@ export function HeroSection() {
 
             <a
               href="#features"
-              className="px-8 py-4 bg-transparent text-white font-mono font-semibold border-2 border-white/20 hover:border-amber hover:text-amber transition-colors"
+              className="px-8 py-4 bg-transparent text-white font-body font-semibold border-2 border-white/20 hover:border-amber hover:text-amber transition-colors"
             >
               VIEW DEMO
             </a>

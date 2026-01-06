@@ -6,7 +6,7 @@ This design system establishes the visual language for DeepSearch, embodying a *
 
 ### Design Philosophy
 
-- **Authority**: Serif + mono typography conveys intellectual credibility
+- **Authority**: Serif + sans-serif typography conveys intellectual credibility
 - **Precision**: Sharp edges, high contrast, intentional spacing
 - **Clarity**: Clear hierarchy, unambiguous visual language
 - **Boldness**: Prominent amber accent color, not timid or diluted
@@ -20,8 +20,8 @@ This design system establishes the visual language for DeepSearch, embodying a *
 
 | Font | Usage | Variable | Weights |
 |------|--------|----------|---------|
-| **Cormorant Garamond** | Headlines, emphasis, quotes | `--font-cormorant` | 400, 600, 700 |
-| **JetBrains Mono** | Body text, labels, technical content | `--font-jetbrains` | 400 |
+| **EB Garamond** | Headlines, emphasis, quotes | `--font-ebgaramond` | 400, 500, 600, 700 |
+| **Inter** | Body text, labels, technical content | `--font-inter` | 400, 500, 600, 700 |
 
 ### Typography Scale
 
@@ -36,25 +36,25 @@ This design system establishes the visual language for DeepSearch, embodying a *
 
 ### Usage Guidelines
 
-#### Cormorant Garamond (`font-display`)
+#### EB Garamond (`font-display`)
 - **Use for**: Headlines, quotes, emphasis, large numbers
 - **Avoid**: Body paragraphs, technical content
-- **Letter spacing**: `-0.02em` (handled by `.font-display` utility)
+- **Special feature**: Exceptionally elegant calligraphic italics
 
 ```tsx
 <h1 className="font-display text-6xl font-bold">Search Deeper.</h1>
 <p className="font-display text-3xl italic">"Research is curiosity in action."</p>
 ```
 
-#### JetBrains Mono (`font-mono`)
-- **Use for**: Body text, technical labels, data, code
+#### Inter (`font-body`)
+- **Use for**: Body text, technical labels, data, UI elements
 - **Avoid**: Large headlines (use serif instead)
 
 ```tsx
-<p className="font-mono text-lg">
+<p className="font-body text-lg">
   Transform scattered information into synthesized knowledge.
 </p>
-<span className="font-mono text-xs text-amber/60">SOURCE 01</span>
+<span className="font-body text-xs text-amber/60">SOURCE 01</span>
 ```
 
 ### Special Text Patterns
@@ -710,8 +710,8 @@ import { Search, ArrowRight, Sparkles } from "lucide-react";
 ### Typography
 
 ```css
-.font-display  /* Cormorant Garamond with letter-spacing */
-.font-mono     /* JetBrains Mono */
+.font-display  /* EB Garamond */
+.font-body     /* Inter */
 ```
 
 ### Color
@@ -777,7 +777,7 @@ import { Search, ArrowRight, Sparkles } from "lucide-react";
 
 ### Body Text Pattern
 ```tsx
-<p className="font-mono text-lg text-white/60">
+<p className="font-body text-lg text-white/60">
   Body text
 </p>
 ```
@@ -834,7 +834,7 @@ export function ComponentName({ title, description }: ComponentProps) {
       <h3 className="font-display text-xl font-bold text-white mb-2">
         {title}
       </h3>
-      <p className="font-mono text-white/70 text-sm">
+      <p className="font-body text-white/70 text-sm">
         {description}
       </p>
     </motion.div>
@@ -862,7 +862,7 @@ See: `src/components/landing/cta-section.tsx:14-60`
 
 ## Resources
 
-- **Typography**: [Cormorant Garamond](https://fonts.google.com/specimen/Cormorant+Garamond), [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)
+- **Typography**: [EB Garamond](https://fonts.google.com/specimen/EB+Garamond), [Inter](https://fonts.google.com/specimen/Inter)
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Color**: Amber #F4A460

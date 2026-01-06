@@ -1,18 +1,19 @@
 import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Cormorant_Garamond, JetBrains_Mono } from "next/font/google";
+import { EB_Garamond, Inter } from "next/font/google";
 import { ConditionalHeader } from "@/components/conditional-header";
 import "./globals.css";
 
-const cormorant = Cormorant_Garamond({
+const ebGaramond = EB_Garamond({
   subsets: ["latin"],
-  variable: "--font-cormorant",
-  weight: ["400", "600", "700"],
+  variable: "--font-ebgaramond",
+  weight: ["400", "500", "600", "700"],
 });
 
-const jetbrains = JetBrains_Mono({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-jetbrains",
+  variable: "--font-inter",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -30,9 +31,9 @@ export default function RootLayout({
       signInFallbackRedirectUrl="/chat"
       signUpFallbackRedirectUrl="/chat"
     >
-      <html lang="en">
+        <html lang="en">
         <body
-          className={`${cormorant.variable} ${jetbrains.variable} antialiased font-sans`}
+          className={`${ebGaramond.variable} ${inter.variable} antialiased font-sans`}
         >
           <ConditionalHeader>{children}</ConditionalHeader>
         </body>

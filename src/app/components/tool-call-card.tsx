@@ -42,9 +42,9 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
     if (isPartialCall) {
       return {
         label: "Preparing search...",
-        bgColor: "bg-amber-50",
-        textColor: "text-amber-700",
-        borderColor: "border-amber-200",
+        bgColor: "bg-amber/10",
+        textColor: "text-amber",
+        borderColor: "border-amber/30",
         animated: true,
       };
     }
@@ -52,18 +52,18 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
     if (!hasResult) {
       return {
         label: "Searching",
-        bgColor: "bg-blue-50",
-        textColor: "text-blue-700",
-        borderColor: "border-blue-200",
+        bgColor: "bg-amber/10",
+        textColor: "text-amber",
+        borderColor: "border-amber/30",
         animated: true,
       };
     }
 
     return {
       label: "Completed",
-      bgColor: "bg-green-50",
-      textColor: "text-green-700",
-      borderColor: "border-green-200",
+      bgColor: "bg-green-500/10",
+      textColor: "text-green-500",
+      borderColor: "border-green-500/30",
       animated: false,
     };
   };
@@ -102,7 +102,7 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
 
   return (
     <div
-      className={`rounded-lg border ${status.borderColor} ${status.bgColor} p-3 my-2 transition-all`}
+      className={`border-2 ${status.borderColor} ${status.bgColor} bg-[#1A1A1A] p-4 my-2 transition-all`}
     >
       {/* Header - Always visible */}
       <div
@@ -118,17 +118,17 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
           {/* Tool Name & Query */}
           <div className="flex flex-col">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">Web Search</span>
+              <span className="font-body text-sm font-semibold text-white">Web Search</span>
               <span
-                className={`text-xs px-2 py-0.5 rounded-full ${status.bgColor} ${status.textColor} border ${status.borderColor}`}
+                className={`text-xs px-2 py-0.5 font-body ${status.textColor} border ${status.borderColor}`}
               >
                 {status.label}
               </span>
             </div>
             {query && !isPartialCall && (
-              <span className="text-xs text-gray-600 mt-1">
+              <span className="text-xs text-white/60 mt-1">
                 {!hasResult ? "Searching for: " : "Query: "}
-                <span className="font-medium">{query}</span>
+                <span className="font-body font-semibold text-white/80">{query}</span>
               </span>
             )}
           </div>
@@ -137,7 +137,7 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
         {/* Expand/Collapse indicator */}
         {hasResult && (
           <div
-            className={`text-gray-400 text-sm transition-transform ${
+            className={`text-white/40 text-sm transition-transform ${
               isExpanded ? "rotate-180" : ""
             }`}
           >
@@ -147,7 +147,7 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
       </div>
 
       {isExpanded && hasResult && (
-        <div className="mt-3 border-t border-green-200 pt-3 space-y-3">
+        <div className="mt-3 border-t border-white/10 pt-3 space-y-3">
           {detailSections.map(({ label, value }) => {
             if (value === undefined) {
               return null;
@@ -155,10 +155,10 @@ export const ToolCallCard = ({ part }: { part: ToolCallPart }) => {
 
             return (
               <div key={label}>
-                <div className="text-xs font-semibold text-gray-700 mb-2">
+                <div className="text-xs font-body font-semibold text-amber/60 mb-2">
                   {label}:
                 </div>
-                <pre className="text-xs bg-white rounded p-2 overflow-x-auto max-h-64 overflow-y-auto border border-green-100">
+                <pre className="text-xs bg-black p-2 overflow-x-auto max-h-64 overflow-y-auto border border-white/10 font-body text-white/80">
                   {toDisplayValue(value)}
                 </pre>
               </div>

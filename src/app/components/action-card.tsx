@@ -30,23 +30,23 @@ export const ActionCard = ({ action }: ActionCardProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="flex items-start gap-3 p-3 my-2 bg-muted/40 border border-border rounded-xl shadow-sm"
+      className="flex items-start gap-3 p-4 my-2 bg-[#1A1A1A] border-brutal-top"
     >
       <div className="flex-shrink-0 mt-1">
-        <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-lg shadow-inner">
+        <div className="w-8 h-8 bg-black text-amber flex items-center justify-center">
           {getIcon(action.type)}
         </div>
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <h4 className="text-sm font-semibold text-foreground truncate">
+          <h4 className="font-body text-sm font-semibold text-white truncate">
             {action.title || `Action: ${action.type}`}
           </h4>
-          <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
+          <span className="text-[10px] font-body text-amber/60">
             STEP {action.step}/10
           </span>
         </div>
-        <p className="text-xs text-muted-foreground leading-relaxed italic">
+        <p className="font-body text-xs text-white/60 leading-relaxed">
           {action.description ||
             `The agent is performing a ${action.type} action.`}
         </p>

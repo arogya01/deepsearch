@@ -62,7 +62,7 @@ export function FeatureCard({
       <h3 className="font-display text-2xl font-bold text-white mb-3">
         {title}
       </h3>
-      <p className="font-mono text-white/70 text-sm leading-relaxed">
+      <p className="font-body text-white/70 text-sm leading-relaxed">
         {description}
       </p>
     </motion.div>
@@ -85,7 +85,7 @@ export function FeaturesSection() {
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
             Powerful Features for <span className="text-amber">Deep Research</span>
           </h2>
-          <p className="text-white/70 text-lg max-w-2xl mx-auto font-mono">
+          <p className="text-white/70 text-lg max-w-2xl mx-auto font-body">
             Everything you need to dive deep into any topic and extract meaningful insights
           </p>
         </motion.div>

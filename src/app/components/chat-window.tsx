@@ -11,22 +11,14 @@ import { ToolCallCard } from "./tool-call-card";
 import { ActionCard } from "./action-card";
 import { generateNanoId } from "@/app/utils/common";
 import { revalidateSidebar } from "@/app/actions/chat";
+import { motion, useReducedMotion } from "framer-motion";
+import { User, Bot, Search, Copy, ArrowDown, RotateCcw } from "lucide-react";
 
 import { type AppUIMessage, type AppUIDataTypes } from "@/lib/ui-types";
 
 export type MessagePart = NonNullable<AppUIMessage["parts"]>[number];
 
 const TOOL_MESSAGE_PREFIX = "tool-";
-
-interface AgentActionData {
-  type: "agent-action";
-  action: {
-    type: string;
-    title: string;
-    description: string;
-    step: number;
-  };
-}
 
 type NormalizedToolMessagePart = {
   type: string;
@@ -111,6 +103,7 @@ export const ChatWindow = ({
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
   const sessionId = useMemo(() => {
     return chatId || `chat_${generateNanoId()}`;
   }, [chatId]);
@@ -275,26 +268,26 @@ export const ChatWindow = ({
   return (
     <div className="w-full flex flex-col h-screen">
       {/* Header */}
-      <div className="bg-muted/30 px-3 py-2 md:px-4 md:py-3 border-b border-border flex items-center justify-between">
+      <div className="bg-[#1A1A1A] border-brutal-top px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <SidebarTrigger />
-          <h2 className="text-sm md:text-base font-semibold text-foreground">
-            Deep Search a topic
+          <h2 className="font-display text-xl font-bold text-white">
+            Deep Search
           </h2>
         </div>
         <div className="flex items-center gap-2">
           {isSubmitted && (
-            <span className="hidden sm:inline-flex items-center rounded-md bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-2 py-1 text-xs">
+            <span className="hidden sm:inline-flex items-center border border-blue-500/30 bg-blue-500/10 text-blue-500 px-3 py-1 text-xs font-body">
               Waiting for response…
             </span>
           )}
           {isStreaming && (
-            <span className="hidden sm:inline-flex items-center rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-200 px-2 py-1 text-xs">
+            <span className="hidden sm:inline-flex items-center border border-amber/30 bg-amber/10 text-amber px-3 py-1 text-xs font-body">
               Streaming…
             </span>
           )}
           {isErrored && (
-            <span className="hidden sm:inline-flex items-center rounded-md bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-200 px-2 py-1 text-xs">
+            <span className="hidden sm:inline-flex items-center border border-red-500/30 bg-red-500/10 text-red-500 px-3 py-1 text-xs font-body">
               Error
             </span>
           )}
@@ -310,36 +303,24 @@ export const ChatWindow = ({
         <StickToBottom.Content className="px-2 py-3 sm:px-4 sm:py-4">
           {messages.length === 0 && (
             <div className="flex items-center justify-center min-h-[60vh]">
-              <div className="max-w-2xl mx-auto text-center px-4">
+              <div className="max-w-4xl mx-auto text-center px-4">
                 {/* Icon */}
-                <div className="mb-6 sm:mb-8">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-lg">
-                    <svg
-                      className="w-8 h-8 sm:w-10 sm:h-10 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
+                <div className="mb-8 flex justify-center">
+                  <div className="w-16 h-16 bg-black text-amber flex items-center justify-center border-2 border-amber">
+                    <Search className="w-8 h-8" />
                   </div>
                 </div>
 
                 {/* Title */}
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-3 sm:mb-4">
+                <h1 className="font-display text-5xl sm:text-6xl font-bold text-white mb-6">
                   Deep Search
                 </h1>
-                <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
+                <p className="font-body text-lg text-white/60 mb-12 max-w-2xl mx-auto">
                   Explore topics in depth with AI-powered research and analysis
                 </p>
 
                 {/* Example Prompts */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {[
                     {
                       icon: "🔬",
@@ -362,22 +343,22 @@ export const ChatWindow = ({
                       title: "Global Events",
                       prompt: "What are the current geopolitical challenges?",
                     },
-                  ].map((example, idx) => (
+                  ].map((example) => (
                     <button
-                      key={idx}
+                      key={example.title}
                       onClick={() => {
                         setInput(example.prompt);
                       }}
-                      className="flex items-start gap-3 p-3 sm:p-4 text-left bg-card border border-border rounded-xl hover:border-primary/50 hover:bg-accent transition-all shadow-sm hover:shadow-md"
+                      className="flex items-start gap-4 p-6 text-left bg-[#1A1A1A] border-brutal-top font-body hover:bg-amber-muted transition-colors"
                     >
-                      <span className="text-xl sm:text-2xl">
+                      <span className="text-2xl">
                         {example.icon}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm sm:text-base text-card-foreground mb-1">
+                        <div className="font-body text-sm font-semibold text-white mb-2">
                           {example.title}
                         </div>
-                        <div className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+                        <div className="text-sm text-white/60 line-clamp-2">
                           {example.prompt}
                         </div>
                       </div>
@@ -385,133 +366,115 @@ export const ChatWindow = ({
                   ))}
                 </div>
 
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p className="text-sm text-white/40 font-body">
                   Start by typing your question or click an example above
                 </p>
               </div>
             </div>
           )}
 
-          {(messages as AppUIMessage[]).map((m, index) => {
+          {(messages as AppUIMessage[]).map((m) => {
             const isUser = m.role === "user";
             const messageText = getMessageText(m);
             const timestamp = formatTimestamp(
               (m as { createdAt?: string | number | Date }).createdAt
             );
 
-            // Check if previous message is from the same sender
-            const previousMessage = index > 0 ? messages[index - 1] : null;
-            const isGrouped = previousMessage?.role === m.role;
-            const isLastInGroup =
-              index === messages.length - 1 ||
-              (index < messages.length - 1 &&
-                messages[index + 1]?.role !== m.role);
-
             return (
-              <div
+              <motion.div
                 key={m.id}
+                initial={{ opacity: 0, y: shouldReduceMotion ? 0 : 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: shouldReduceMotion ? 0.2 : 0.4 }}
                 className={`flex ${
                   isUser ? "justify-end" : "justify-start"
-                } group ${isGrouped ? "mt-1" : "mt-4 sm:mt-6"}`}
+                } group mt-4 sm:mt-6`}
               >
                 <div
-                  className={`flex gap-2 sm:gap-3 max-w-[85%] sm:max-w-[80%] md:max-w-[75%] ${
+                  className={`flex gap-3 max-w-[85%] sm:max-w-[80%] md:max-w-[75%] ${
                     isUser ? "flex-row-reverse" : "flex-row"
                   }`}
                 >
-                  {/* Avatar - only show for first message in group */}
+                  {/* Avatar - always show */}
                   <div className="flex-shrink-0 mt-1">
-                    {!isGrouped ? (
-                      <div
-                        className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-semibold ${
-                          isUser
-                            ? "bg-blue-600 text-white"
-                            : "bg-gradient-to-br from-purple-500 to-pink-500 text-white"
-                        }`}
-                      >
-                        {isUser ? "U" : "AI"}
-                      </div>
-                    ) : (
-                      <div className="w-7 h-7 sm:w-8 sm:h-8" />
-                    )}
+                    <div className="w-8 h-8 bg-black text-amber flex items-center justify-center border-2 border-amber">
+                      {isUser ? (
+                        <User className="w-4 h-4" />
+                      ) : (
+                        <Bot className="w-4 h-4" />
+                      )}
+                    </div>
                   </div>
 
                   {/* Message Content */}
                   <div className="flex flex-col min-w-0">
                     <div
-                      className={`rounded-xl sm:rounded-2xl px-3 py-2 sm:px-4 sm:py-3 shadow-md transition-shadow hover:shadow-lg ${
+                      className={`p-4 transition-colors ${
                         isUser
-                          ? "bg-blue-600 dark:bg-blue-700 text-white"
-                          : "bg-muted/50 dark:bg-muted text-foreground"
+                          ? "bg-amber p-4 border-2 border-amber"
+                          : "bg-[#1A1A1A] border-brutal-top"
                       }`}
                     >
-                      {renderMessageContent(m)}
+                      <div className={isUser ? "font-body text-black" : "font-body text-white/80"}>
+                        {renderMessageContent(m)}
+                      </div>
                     </div>
 
-                    {/* Timestamp and Actions - only show for last message in group */}
-                    {isLastInGroup && (
-                      <div
-                        className={`flex items-center gap-2 mt-1 px-1 ${
-                          isUser ? "justify-end" : "justify-start"
-                        }`}
-                      >
-                        {timestamp && (
-                          <span className="text-[10px] sm:text-xs text-muted-foreground">
-                            {timestamp}
-                          </span>
-                        )}
+                    {/* Timestamp and Actions */}
+                    <div
+                      className={`flex items-center gap-2 mt-1 px-1 ${
+                        isUser ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      {timestamp && (
+                        <span className="text-[10px] sm:text-xs text-white/40 font-body">
+                          {timestamp}
+                        </span>
+                      )}
 
-                        {/* Copy Button - only for assistant messages */}
-                        {!isUser && messageText && (
-                          <button
-                            onClick={() => copyToClipboard(messageText)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded text-muted-foreground hover:text-foreground"
-                            aria-label="Copy message"
-                            title="Copy message"
-                          >
-                            <svg
-                              className="w-3 h-3 sm:w-3.5 sm:h-3.5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      {/* Copy Button - only for assistant messages */}
+                      {!isUser && messageText && (
+                        <button
+                          onClick={() => copyToClipboard(messageText)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-white/40 hover:text-amber"
+                          aria-label="Copy message"
+                          title="Copy message"
+                        >
+                          <Copy className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
 
           {lastAssistantStreaming && (
             <div className="flex justify-start group">
-              <div className="flex gap-2 sm:gap-3">
+              <div className="flex gap-3">
                 {/* AI Avatar */}
                 <div className="flex-shrink-0 mt-1">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-white flex items-center justify-center text-xs sm:text-sm font-semibold animate-pulse">
-                    AI
+                  <div className="w-8 h-8 bg-black text-amber flex items-center justify-center border-2 border-amber animate-pulse">
+                    <Bot className="w-4 h-4" />
                   </div>
                 </div>
 
                 {/* Thinking Animation */}
-                <div className="bg-muted/50 dark:bg-muted text-muted-foreground px-4 py-3 sm:px-5 sm:py-4 rounded-xl sm:rounded-2xl shadow-md">
+                <div className="bg-[#1A1A1A] border-brutal-top p-4">
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
-                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                      <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                      <span className="w-2 h-2 bg-muted-foreground/80 rounded-full animate-bounce"></span>
+                      <span className="w-2 h-2 bg-amber rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                      <span className="w-2 h-2 bg-amber rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                      <span className="w-2 h-2 bg-amber rounded-full animate-bounce"></span>
                     </div>
-                    <span className="text-xs sm:text-sm">Thinking…</span>
+                    <span className="font-body text-sm text-white/60">Processing…</span>
                   </div>
+                  <motion.div
+                    animate={shouldReduceMotion ? undefined : { opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="h-px bg-amber/60 mt-3"
+                  />
                 </div>
               </div>
             </div>
@@ -519,30 +482,18 @@ export const ChatWindow = ({
 
           {isErrored && (
             <div className="flex justify-center">
-              <div className="w-full max-w-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl shadow-md overflow-hidden">
-                <div className="flex items-start gap-3 p-3 sm:p-4">
+              <div className="w-full max-w-md border-2 border-red-500 bg-[#1A1A1A] p-4">
+                <div className="flex items-start gap-3">
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-                      <svg
-                        className="w-5 h-5 text-red-600 dark:text-red-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
+                    <div className="w-8 h-8 bg-black text-red-500 flex items-center justify-center border-2 border-red-500">
+                      <span className="font-display text-xl font-bold">!</span>
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
-                      Something went wrong
+                    <h4 className="font-display text-xl font-bold text-white mb-2">
+                      Error
                     </h4>
-                    <p className="text-xs sm:text-sm text-red-700 dark:text-red-300">
+                    <p className="font-body text-white/60 text-sm">
                       We encountered an error. Please try again or contact
                       support if the problem persists.
                     </p>
@@ -557,8 +508,8 @@ export const ChatWindow = ({
       </StickToBottom>
 
       {/* Composer */}
-      <div className="border-t border-border bg-card p-2 sm:p-3">
-        <div className="flex items-end gap-1.5 sm:gap-2">
+      <div className="border-t border-white/10 bg-[#080808] p-4">
+        <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}
             value={input}
@@ -571,7 +522,7 @@ export const ChatWindow = ({
                 ? "Fix or retry…"
                 : "Ask anything…"
             }
-            className="flex-1 resize-none rounded-lg border border-input bg-background px-2.5 py-1.5 sm:px-3 sm:py-2 text-sm sm:text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:bg-muted disabled:text-muted-foreground disabled:cursor-not-allowed min-h-[44px] max-h-[200px] transition-all"
+            className="flex-1 resize-none bg-[#1A1A1A] border-2 border-white/20 text-white font-body px-4 py-3 text-sm sm:text-base placeholder:text-white/40 focus:border-amber focus:outline-none min-h-[48px] max-h-[200px]"
             rows={1}
             disabled={!isReady}
           />
@@ -581,8 +532,9 @@ export const ChatWindow = ({
             <button
               type="button"
               onClick={() => regenerate()}
-              className="shrink-0 rounded-lg bg-blue-600 dark:bg-blue-700 px-3 py-2 sm:px-4 text-sm sm:text-base text-white hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
+              className="shrink-0 px-6 py-3 bg-amber text-black font-body font-semibold border-2 border-amber hover:bg-black hover:text-amber transition-colors flex items-center gap-2"
             >
+              <RotateCcw className="w-4 h-4" />
               Retry
             </button>
           ) : (
@@ -590,34 +542,35 @@ export const ChatWindow = ({
               type="button"
               onClick={handleSubmit}
               disabled={!input.trim()}
-              className="shrink-0 rounded-lg bg-blue-600 dark:bg-blue-700 px-3 py-2 sm:px-4 text-sm sm:text-base text-white hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="shrink-0 px-6 py-3 bg-amber text-black font-body font-semibold border-2 border-amber hover:bg-black hover:text-amber disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
             >
               Send
+              <ArrowDown className="w-4 h-4 rotate-[-90deg]" />
             </button>
           )}
         </div>
 
-        <div className="mt-0.5 sm:mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] sm:text-[11px] text-muted-foreground">
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/40 font-body">
           <span>
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] sm:text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 bg-[#1A1A1A] border border-white/20 text-[10px] sm:text-[11px] font-body">
               Enter
             </kbd>{" "}
             to send
           </span>
           <span>
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] sm:text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 bg-[#1A1A1A] border border-white/20 text-[10px] sm:text-[11px] font-body">
               Shift+Enter
             </kbd>{" "}
             for newline
           </span>
           <span>
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] sm:text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 bg-[#1A1A1A] border border-white/20 text-[10px] sm:text-[11px] font-body">
               Esc
             </kbd>{" "}
             to stop
           </span>
           <span className="hidden sm:inline">
-            <kbd className="px-1 py-0.5 bg-muted rounded text-[9px] sm:text-[10px] font-mono">
+            <kbd className="px-1.5 py-0.5 bg-[#1A1A1A] border border-white/20 text-[10px] sm:text-[11px] font-body">
               ⌘/
             </kbd>{" "}
             to focus
@@ -636,22 +589,10 @@ const ScrollToBottomButton = () => {
   return (
     <button
       onClick={() => scrollToBottom("smooth")}
-      className="absolute bottom-20 right-3 sm:bottom-4 sm:right-4 rounded-full bg-blue-600 text-white p-2.5 sm:p-3 shadow-lg hover:bg-blue-700 transition-colors z-10"
+      className="absolute bottom-20 right-4 sm:bottom-4 sm:right-4 bg-amber text-black p-3 border-2 border-amber hover:bg-black hover:text-amber transition-colors z-10"
       aria-label="Scroll to bottom"
     >
-      <svg
-        className="w-4 h-4 sm:w-5 sm:h-5"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M19 14l-7 7m0 0l-7-7m7 7V3"
-        />
-      </svg>
+      <ArrowDown className="w-5 h-5" />
     </button>
   );
 };

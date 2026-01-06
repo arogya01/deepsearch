@@ -24,7 +24,7 @@ export function CTASection() {
             Ready to Research<br/>Deeper Than Ever?
           </h2>
 
-          <p className="font-mono text-black/70 text-lg mb-8 max-w-2xl">
+          <p className="font-body text-black/70 text-lg mb-8 max-w-2xl">
             Join researchers, analysts, and knowledge workers who&apos;ve transformed their workflow with AI-powered synthesis.
           </p>
 
@@ -33,7 +33,7 @@ export function CTASection() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-10 py-5 bg-transparent text-black font-mono font-semibold border-2 border-black hover:bg-black hover:text-amber transition-colors"
+                className="px-10 py-5 bg-transparent text-black font-body font-semibold border-2 border-black hover:bg-black hover:text-amber transition-colors"
               >
                 BEGIN YOUR RESEARCH →
               </motion.button>
@@ -45,7 +45,7 @@ export function CTASection() {
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="px-10 py-5 bg-transparent text-black font-mono font-semibold border-2 border-black hover:bg-black hover:text-amber transition-colors"
+                className="px-10 py-5 bg-transparent text-black font-body font-semibold border-2 border-black hover:bg-black hover:text-amber transition-colors"
               >
                 GO TO DASHBOARD →
               </motion.button>

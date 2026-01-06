@@ -38,7 +38,7 @@ export function HowItWorksSection() {
           <h2 className="text-4xl sm:text-5xl font-bold text-white mb-4">
             How It <span className="text-amber">Works</span>
           </h2>
-          <p className="text-white/70 text-lg max-w-2xl mx-auto font-mono">
+          <p className="text-white/70 text-lg max-w-2xl mx-auto font-body">
             Four simple steps to unlock the knowledge you need
           </p>
         </motion.div>
@@ -56,7 +56,7 @@ export function HowItWorksSection() {
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
               >
-                <div className={`absolute left-4 top-0 w-9 h-9 bg-[#1A1A1A] border-2 border-amber flex items-center justify-center font-mono text-amber font-bold ${index % 2 === 1 ? 'md:left-auto md:right-4' : ''}`}>
+                <div className={`absolute left-4 top-0 w-9 h-9 bg-[#1A1A1A] border-2 border-amber flex items-center justify-center font-body text-amber font-bold ${index % 2 === 1 ? 'md:left-auto md:right-4' : ''}`}>
                   0{index + 1}
                 </div>
 
@@ -64,7 +64,7 @@ export function HowItWorksSection() {
                   <h3 className="font-display text-2xl font-bold text-white mb-2">
                     {step.title}
                   </h3>
-                  <p className="font-mono text-white/60">
+                  <p className="font-body text-white/60">
                     {step.description}
                   </p>
                 </div>

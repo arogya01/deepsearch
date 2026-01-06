@@ -42,7 +42,7 @@ export function Footer() {
             <div className="inline-block mb-4">
               <h3 className="text-2xl font-bold text-amber">DeepSearch</h3>
             </div>
-            <p className="text-white/60 mb-6 max-w-sm font-mono">
+            <p className="text-white/60 mb-6 max-w-sm font-body">
               Empowering knowledge discovery through advanced AI-powered search.
               Explore deeper, discover more.
             </p>
@@ -73,7 +73,7 @@ export function Footer() {
                   <li key={linkIndex}>
                     <Link
                       href={link.href}
-                      className="text-white/60 hover:text-amber transition-colors font-mono text-sm"
+                      className="text-white/60 hover:text-amber transition-colors font-body text-sm"
                     >
                       {link.name}
                     </Link>
@@ -87,10 +87,10 @@ export function Footer() {
         {/* Bottom bar */}
         <div className="pt-8 border-t border-white/10">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-white/50 text-sm font-mono">
+            <p className="text-white/50 text-sm font-body">
               © {new Date().getFullYear()} DeepSearch. All rights reserved.
             </p>
-            <div className="flex items-center gap-2 text-white/50 text-sm font-mono">
+            <div className="flex items-center gap-2 text-white/50 text-sm font-body">
               <span>Made with</span>
               <motion.span
                 animate={{ scale: [1, 1.2, 1] }}
