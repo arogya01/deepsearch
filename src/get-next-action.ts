@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { actionSchema } from './output-schema';
 import { SystemContext } from './system-context';
 import { observe } from '@langfuse/tracing';
+import { buildNextActionPrompt } from './prompts/get-next-action-prompt';
 
 // Infer the type from the schema
 type Action = z.infer<typeof actionSchema>;
@@ -17,26 +18,7 @@ async function sleep(ms: number): Promise<void> {
 
 export const getNextAction = observe(
   async function getNextAction(ctx: SystemContext): Promise<Action> {
-    const prompt = `You are a research assistant that decides the next action to take.
-
-USER QUESTION: ${ctx.getQuestion()}
-
-CURRENT RESEARCH STATE:
-${ctx.getContextSummary()}
-
-STEPS TAKEN: ${ctx.getStep()}/10
-
-DECIDE YOUR NEXT ACTION:
-1. Return {"type": "research", "query": "your search query"} to search the web
-2. Optionally include "urlsToScrape": ["url1", "url2"] to also fetch detailed content from specific URLs
-3. Return {"type": "answer"} if you have ENOUGH information to answer comprehensively
-
-Rules:
-- On step 1, you almost always need to search first
-- Only scrape URLs that appeared in your search results
-- Answer when you have sufficient information OR when running low on steps (7+)
-
-You MUST return a valid JSON object with a "type" field.`;
+    const prompt = buildNextActionPrompt(ctx);
 
     let lastError: Error | null = null;
 
