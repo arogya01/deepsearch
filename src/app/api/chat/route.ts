@@ -9,7 +9,7 @@ import {
   getSessionWithMessages,
   persistAgentResult,
 } from '@/server/db/chat-persistence';
-import { startActiveObservation, updateActiveTrace } from '@langfuse/tracing';
+import { startActiveObservation } from '@langfuse/tracing';
 import { langfuseSpanProcessor } from '../../../instrumentation';
 import { performDeepSearch } from '@/server/search/deep-search';
 
@@ -73,9 +73,8 @@ export async function POST(req: Request) {
         }
       }
 
-      rootSpan.update({
-        input: { question },
-      });
+      // Set trace input after extracting the question
+      rootSpan.updateTrace({ input: question });
 
       const uiMessageStream = createUIMessageStream({
         execute: async ({ writer }) => {
@@ -92,10 +91,11 @@ export async function POST(req: Request) {
             // ─────────────────────────────────────────────────────────────
             const answer = await finalStream.text;
 
-            updateActiveTrace({
-              sessionId,
-              output: answer
+            // Set trace-level output and end the span
+            rootSpan.updateTrace({
+              output: answer,
             });
+            rootSpan.update({ output: { answer, status: 'complete' } }).end();
 
             await persistAgentResult({
               sessionId,
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
         },
       });
 
-      rootSpan.update({ output: 'Stream started' });
+      // Note: span will be ended inside the execute callback after answer is captured
 
       return createUIMessageStreamResponse({ stream: uiMessageStream });
 

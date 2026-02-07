@@ -1,7 +1,10 @@
-import { SystemContext } from '../system-context';
+import { SystemContext } from "../system-context";
+import { getNextActionSystemPrompt, formatCurrentDate } from "./config";
 
 export function buildNextActionPrompt(ctx: SystemContext): string {
-    return `You are a research assistant that decides the next action to take.
+  const systemPrompt = getNextActionSystemPrompt();
+
+  return `${systemPrompt}
 
 ## User Question
 ${ctx.getQuestion()}
@@ -11,6 +14,7 @@ ${ctx.getContextSummary()}
 
 ## Progress
 **Steps Taken:** ${ctx.getStep()}/10
+**Current Date:** ${formatCurrentDate()}
 
 ## Available Actions
 
@@ -29,10 +33,11 @@ ${ctx.getContextSummary()}
    {"type": "answer"}
    \`\`\`
 
-## Rules
+## Action Selection Rules
 - On step 1, you almost always need to search first
 - Only scrape URLs that appeared in your search results
 - Answer when you have sufficient information OR when running low on steps (7+)
+- **TEMPORAL PRIORITY**: When the question involves current events, prioritize searching for information from the most recent dates visible in the search results
 
 ---
 

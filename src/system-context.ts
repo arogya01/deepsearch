@@ -1,3 +1,5 @@
+import { formatSearchDate } from "@/lib/date-utils";
+
 type QuerySearchResult = {
   date: string;
   title: string;
@@ -51,7 +53,8 @@ export class SystemContext {
       for (const q of this.queryHistory) {
         summary += `\nQuery: "${q.query}"`;
         for (const r of q.result) {
-          summary += `- [${r.title}](${r.url}): ${r.snippet}\n`;
+          const formattedDate = formatSearchDate(r.date);
+          summary += `- [${formattedDate}] [${r.title}](${r.url}): ${r.snippet}\n`;
         }
       }
     }

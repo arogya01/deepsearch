@@ -1,6 +1,7 @@
 import { SystemContext } from "./system-context";
 import { performWebSearch } from "./server/search/web-search";
 import { performWebScrape } from "./server/search/web-scraper";
+import { summarizeURL } from "./summarize-url";
 import { getNextAction } from "./get-next-action";
 import { answerQuestion } from "./answer-question";
 import { UIMessageStreamWriter } from "ai";
@@ -90,8 +91,17 @@ export const runAgentLoop = observe(
                 console.log(`→ ${url}`);
                 const scrapeResult = await performWebScrape(url, userId);
                 if (scrapeResult.success && scrapeResult.markdown) {
-                  scrapeResults.push({ url, result: scrapeResult.markdown });
-                  console.log(`   ✅ Scraped successfully`);
+                  console.log(`   ✅ Scraped successfully, summarizing...`);
+
+                  // Summarize the raw content to extract high-signal information
+                  const summarized = await summarizeURL({
+                    researchTopic: question,
+                    url,
+                    rawContent: scrapeResult.markdown,
+                  });
+
+                  console.log(`   📝 Summarized (${summarized.originalLength} → ${summarized.summaryLength} chars)`);
+                  scrapeResults.push({ url, result: summarized.summary });
                 }
               } catch (error) {
                 console.error(`   ❌ Failed to scrape ${url}:`, error);
